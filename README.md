@@ -1,2 +1,22 @@
 # PoapArtBot
-Automated drawing interface for poap.art
+_Automated drawing interface for poap.art_
+
+This tool automates the drawing of images (later: text, ...) on the [poap.art website](poap.art).
+
+## Usage
+__I know this is ugly, it's still in development. It's just a PoC.__ \
+At the moment this is hardcoded for the ongoing weekly sandbox canvas.
+1. Download the repository
+2. Open `index.html` in your browser
+3. Scroll to the buttons at the bottom
+4. Open metamask
+5. Login (by signing the message)
+6. Drag-and-Drop an image you like onto the canvas
+7. Once you're happy, hit start!
+
+## Contribute
+Unfortunately, the website isn't open source (let's hope it will be soon!), so I basically needed to rebuilt all the relevant parts of it.
+I'm no professional at reverse engineering websites and didn't even do anything with js really, so there's definetly a lot you could help with. \
+most important tasks:
+- fix canvas construction: There's two apis which can be used to built the canvas, `chunk` and `pixel`. `pixel` is more of a live endpoint, but `chunk` seems to update less often (around once a day?). Most likely you can query these apis, I just didn't find out how yet.
+- refactor ui: I'm currently only focusing on core features (that's a lot) 
