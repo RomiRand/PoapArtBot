@@ -11,8 +11,8 @@ At the moment this is hardcoded for the ongoing weekly sandbox canvas.
 3. Scroll to the buttons at the bottom
 4. Open metamask
 5. Login (by signing the message)
-6. Drag-and-Drop an image you like onto the canvas
-7. Once you're happy, hit start!
+6. Drag-and-Drop an image you like onto the canvas. After droppping you can grab it again, or scale it while pressing `CTRL`.
+8. Once you're happy, hit start!
 
 ## Contribute
 Unfortunately, the website isn't open source (let's hope it will be soon!), so I basically needed to rebuilt all the relevant parts of it.
