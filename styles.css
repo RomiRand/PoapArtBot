@@ -1,0 +1,46 @@
+canvas {
+    image-rendering: pixelated;
+    position: relative;
+    float: top;
+}
+
+.btn {
+    width: 100%;
+    font-size: 50px;
+}
+
+#startDraw
+{
+    background-color: green;
+}
+
+#hideBtn
+{
+    background-color: red;
+}
+
+#baseCanvas
+{
+    z-index: 0;
+    position: absolute;
+}
+
+#drawCanvas
+{
+    z-index: 1;
+    position: absolute;
+    opacity: 50%;
+}
+
+.canvas
+{
+    position: relative;
+    float: top;
+    height: 4150px;
+}
+
+.btns
+{
+    position: relative;
+    float: bottom;
+}
