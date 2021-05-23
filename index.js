@@ -11,6 +11,10 @@ let baseUrl = "https://api-sandbox.poap.art/"
 let chunkSize = 0
 let rows = 0
 let cols = 0
+let idx_array
+let addr
+let friendlyArtists = 0
+let enemyArtists = 0
 
 const secondsSinceEpoch = Math.round(Date.now()) - 15 * 60 * 1000
 
@@ -21,11 +25,50 @@ function onOpen (event) {
     // let msg = JSON.parse(event);
     console.log(event);
 }
+/*const createKeccakHash = require('keccak')
+
+function toChecksumAddress (address) {
+    address = address.toLowerCase().replace('0x', '')
+    var hash = createKeccakHash('keccak256').update(address).digest('hex')
+    var ret = '0x'
+
+    for (var i = 0; i < address.length; i++) {
+        if (parseInt(hash[i], 16) >= 8) {
+            ret += address[i].toUpperCase()
+        } else {
+            ret += address[i]
+        }
+    }
+
+    return ret
+}*/
+
 function onMessage (event) {
     let msg = JSON.parse(event.data);
-    if (msg[0] === "pixel") {
+    if (msg[0] === "pixel")
+    {
         drawPixel(msg[1], msg[2], msg[3]);
-        // console.log("x: " + msg[1] + " y: " + msg[2] + " col: " + palette[msg[3]]);
+        if (img.x <= msg[1] && msg[1] < img.x + img.image.width &&
+            img.y <= msg[2] && msg[2] < img.y + img.image.height)
+        {
+            const col = drawCtx.getImageData(msg[1], msg[2], 1, 1).data;
+            let color_idx = approximateColor(col[0], col[1], col[2])
+            let i = (msg[2] - img.y) * img.image.width + msg[1] - img.x
+            if (msg[3] !== color_idx)
+            {
+                idx_array.push(i)
+                enemyArtists++; // filter ourselves ?
+            }
+            else
+            {
+                idx_array.splice(idx_array.indexOf(i), 1)
+                if (msg[5].toUpperCase() !== addr.toUpperCase())
+                {
+                    console.log("someone helped, thanks!")
+                    friendlyArtists++
+                }
+            }
+        }
     }
     else if (msg[0] === "pixels")
     {
@@ -107,7 +150,7 @@ async function paintPixel(x, y, color)
         .then(data=>{return data.json()})
         .then(async function(data) {
             console.log("drawn pixel!");
-            await delay(1200);
+            await delay(1100);
         });
 }
 
@@ -208,8 +251,8 @@ function mouseMove(event) {
         const x_off = img.image.width - (img.x + img.image.width - pos.x)
         const y_off = img.image.height - (img.y + img.image.height - pos.y)
         setPosition(event);
-        img.x = pos.x - x_off;
-        img.y = pos.y - y_off;
+        img.x = Math.floor(pos.x - x_off);
+        img.y = Math.floor(pos.y - y_off);
         drawCtx.drawImage(img.image, img.x, img.y, img.image.width, img.image.height);
         drawCanvas.style.cursor = "move";
         return;
@@ -264,6 +307,9 @@ hideButton.addEventListener('click', async () => {
 signTypedDataV3Button.addEventListener('click', async function(event) {
     event.preventDefault()
 
+    const accounts = await ethereum.request({ method: 'eth_accounts' });
+    addr = EthJS.Util.toChecksumAddress(accounts[0])
+
     const msgParams = JSON.stringify({
         types: {
             EIP712Domain: [
@@ -288,20 +334,18 @@ signTypedDataV3Button.addEventListener('click', async function(event) {
         message:{
             art_title:"Week 20 - 2021",
             art_id:"nKOjzq",
-            artist_address: '0x27EB4D3C5cd4af11d7058D902b18c3aFBDE26Bb4'
+            artist_address: addr
         }
     });
 
-    const accounts = await ethereum.request({ method: 'eth_accounts' });
-    let from = accounts[0]
 
-    let params = [from, msgParams];
+    let params = [addr, msgParams];
     let method = 'eth_signTypedData_v4';
     await window.ethereum.request(
         {
             method: method,
             params: params,
-            from: from,
+            from: addr,
             id: 1
         }
     ).then(function (result, err) {
@@ -315,7 +359,7 @@ signTypedDataV3Button.addEventListener('click', async function(event) {
 
         let url = baseUrl + canvasId + "/signin"
         const data= {
-            wallet: "0x27EB4D3C5cd4af11d7058D902b18c3aFBDE26Bb4",
+            wallet: addr,
             chainId: 1,
             signature: result
         }
@@ -335,13 +379,20 @@ signTypedDataV3Button.addEventListener('click', async function(event) {
     })
 });
 
-async function getCurrentColor(x, y) {
+async function getCurrentColor(x, y)
+{
+    const imageData = baseCtx.getImageData(x, y, 1, 1).data
 
-    const result = await fetch(
+    return (imageData[0].toString(16).padStart(2, '0') +
+        imageData[1].toString(16).padStart(2, '0') +
+        imageData[2].toString(16).padStart(2, '0')).toUpperCase()
+
+    // request API
+    /*const result = await fetch(
         baseUrl + canvasId + "/pixel/" + x + "," + y,
         {
             headers: {
-                accept: "application/json, text/plain, */*",
+                accept: "application/json, text/plain",
             },
             method: "GET",
         }
@@ -349,7 +400,7 @@ async function getCurrentColor(x, y) {
     if (result.headers.get("Content-Type") != "application/json; charset=utf-8")
         return 0;
     const json = await result.json();
-    return json.color;
+    return json.color;*/
 }
 
 function delay(ms) {
@@ -365,6 +416,27 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
+function approximateColor(r, g, b)
+{
+    let min_idx = -1;
+    let min_dist = Number.MAX_VALUE;
+    for (let j = 0; j < palette.length; j++)
+    {
+        let col_r = parseInt(palette[j].slice(0, 2), 16);
+        let col_g = parseInt(palette[j].slice(2, 4), 16);
+        let col_b = parseInt(palette[j].slice(4, 6), 16);
+        // need a error function for color bit depth downscale approximation; probably quadratic sum is most accurate ?
+        let dist = Math.pow(Math.abs(r - col_r), 2)  + Math.pow(Math.abs(g - col_g),2) + Math.pow(Math.abs(b - col_b), 2);
+        if (dist < min_dist)
+        {
+            min_dist = dist;
+            min_idx = j;
+            if (dist === 0)
+                break;
+        }
+    }
+    return min_idx;
+}
 
 startDraw.addEventListener('click', async function(event)
 {
@@ -376,51 +448,42 @@ startDraw.addEventListener('click', async function(event)
     }
     startDraw.style.backgroundColor = "red";
     startDraw.textContent = "Stop Drawing"
-    const imgData = drawCtx.getImageData(img.x, img.y, img.image.width, img.image.height);
+    const imgData = drawCtx.getImageData(img.x, img.y, img.image.width, img.image.height).data;
+    idx_array = [...Array(imgData.length / 4).keys()]
     for (;;)
     {
-        let i = getRandomInt(imgData.data.length / 4) * 4
         if (startDraw.textContent !== "Stop Drawing")
-        {
-            console.log("stopped drawing")
             break
-        }
-        const red = imgData.data[i];
-        const green = imgData.data[i + 1];
-        const blue = imgData.data[i + 2];
-        const alpha = imgData.data[i + 3];
-        if (alpha <= 16)    // almost transparent, we can probably hide it
-            continue
-
-        let min_idx = -1;
-        let min_dist = Number.MAX_VALUE;
-        for (let j = 0; j < palette.length; j++)
+        if (idx_array.length === 0)
         {
-            let col_r = parseInt(palette[j].slice(0, 2), 16);
-            let col_g = parseInt(palette[j].slice(2, 4), 16);
-            let col_b = parseInt(palette[j].slice(4, 6), 16);
-            // need a error function for color bit depth downscale approximation; probably quadratic is most accurate ?
-            let dist = Math.pow(Math.abs(red - col_r), 2)  + Math.pow(Math.abs(green - col_g),2) + Math.pow(Math.abs(blue - col_b), 2);
-            if (dist < min_dist)
-            {
-                min_dist = dist;
-                min_idx = j;
-                if (dist === 0)
-                    break;
-            }
+            await delay(1000)
+            continue
         }
+        let idx = getRandomInt(idx_array.length)
+        let i = idx_array[idx] * 4
+        const red = imgData[i];
+        const green = imgData[i + 1];
+        const blue = imgData[i + 2];
+        const alpha = imgData[i + 3];
+        if (alpha <= 16)    // almost transparent, we can probably hide it
+        {
+            idx_array.splice(idx, 1)
+            continue
+        }
+
+        let min_idx = approximateColor(red, green, blue)
         const x = img.x + (i / 4 % img.image.width)
         const y = img.y + Math.trunc(((i / 4) / img.image.width))
         const col = await getCurrentColor(x, y);
-        if (col !== min_idx)
-            await paintPixel(x, y, min_idx);
+        if (col !== palette[min_idx])
+            await paintPixel(x, y, min_idx)
         else
-            console.log("pixel already set")
+            idx_array.splice(idx,1)
     }
 })
 
 // Image for loading
-img = {
+let img = {
     image: document.createElement("img"),
     x: 0,
     y: 0,
@@ -444,8 +507,8 @@ drawCanvas.addEventListener("drop", function (evt) {
             var reader = new FileReader();
 // Note: addEventListener doesn't work in Google Chrome for this event
             reader.onload = function (evt) {
-                img.x = pos.x;
-                img.y = pos.y;
+                img.x = Math.floor(pos.x);
+                img.y = Math.floor(pos.y);
                 img.image.src = evt.target.result;
             };
             reader.readAsDataURL(file);
