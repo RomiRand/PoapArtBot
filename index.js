@@ -4,6 +4,7 @@ const signTypedDataV3Button = document.getElementById('signTypedDataV4Button');
 const startDraw = document.getElementById('startDraw');
 const baseCanvas = document.getElementById('baseCanvas');
 const drawCanvas = document.getElementById('drawCanvas');
+const friendlyTable = document.getElementById('FriendlyTable');
 
 let canvasId = "nKOjzq"
 let bearer = ""
@@ -16,7 +17,10 @@ let addr
 let friendlyArtists = 0
 let enemyArtists = 0
 
-const secondsSinceEpoch = Math.round(Date.now()) - 15 * 60 * 1000
+function secondsSinceEpoch()
+{
+    return Math.round(Date.now()) - 15 * 60 * 1000
+}
 
 let webSocket = new WebSocket("wss://api-sandbox.poap.art/" + canvasId);//?since=" + secondsSinceEpoch.toString(16));
 webSocket.addEventListener("message", onMessage);
@@ -25,23 +29,36 @@ function onOpen (event) {
     // let msg = JSON.parse(event);
     console.log(event);
 }
-/*const createKeccakHash = require('keccak')
 
-function toChecksumAddress (address) {
-    address = address.toLowerCase().replace('0x', '')
-    var hash = createKeccakHash('keccak256').update(address).digest('hex')
-    var ret = '0x'
-
-    for (var i = 0; i < address.length; i++) {
-        if (parseInt(hash[i], 16) >= 8) {
-            ret += address[i].toUpperCase()
-        } else {
-            ret += address[i]
-        }
+async function setTable(id)
+{
+    let map
+    document.getElementById(id).innerHTML = "";
+    let tbody = document.getElementById(id);
+    if (id === "friendlyTableBody")
+    {
+        map = friendlyArtistsList
+    }
+    else if (id === "enemyTableBody")
+    {
+        map = enemyArtistsList
     }
 
-    return ret
-}*/
+    function logMapElements(value, key, map) {
+        let row = tbody.insertRow(0);
+        let cell = row.insertCell(0)
+        cell.innerHTML = key
+    }
+    map.forEach(logMapElements)
+
+    await delay(1100)
+    setTable(id)
+}
+
+let friendlyArtistsList = new Map()
+let enemyArtistsList = new Map()
+setTable('friendlyTableBody')
+setTable('enemyTableBody')
 
 function onMessage (event) {
     let msg = JSON.parse(event.data);
@@ -58,6 +75,7 @@ function onMessage (event) {
             {
                 idx_array.push(i)
                 enemyArtists++; // filter ourselves ?
+                enemyArtistsList.set(msg[5], secondsSinceEpoch())
             }
             else
             {
@@ -65,8 +83,10 @@ function onMessage (event) {
                 if (msg[5].toUpperCase() !== addr.toUpperCase())
                 {
                     console.log("someone helped, thanks!")
+                    //friendlyTable.size
                     friendlyArtists++
                 }
+                friendlyArtistsList.set(msg[5], secondsSinceEpoch())
             }
         }
     }
@@ -112,7 +132,7 @@ async function getChunk(row, col)
 {
     if (canvasId === "")
         return;
-    let url = baseUrl + canvasId + "/chunk/" + row + ":" + col + "?since=" + secondsSinceEpoch.toString(16);
+    let url = baseUrl + canvasId + "/chunk/" + row + ":" + col + "?since=" + secondsSinceEpoch().toString(16);
     const response = await fetch(url);
     return await response.arrayBuffer();
 }

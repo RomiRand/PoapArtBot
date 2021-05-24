@@ -4,6 +4,11 @@ canvas {
     float: top;
 }
 
+#abc
+{
+    background-color: black;
+}
+
 .btn {
     width: 100%;
     font-size: 50px;
@@ -43,4 +48,31 @@ canvas {
 {
     position: relative;
     float: bottom;
+}
+
+table
+{
+    margin-left: auto;
+    margin-right: auto;
+}
+
+th
+{
+    text-align: center;
+}
+
+div#FriendlyArtists
+{
+    float: left;
+    background-color: green;
+    width: 50%;
+    text-align: center;
+    align-content: center;
+}
+
+div#EnemyArtists
+{
+    float: right;
+    background-color: red;
+    width: 50%;
 }
