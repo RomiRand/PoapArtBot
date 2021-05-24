@@ -83,7 +83,6 @@ function onMessage (event) {
                 if (msg[5].toUpperCase() !== addr.toUpperCase())
                 {
                     console.log("someone helped, thanks!")
-                    //friendlyTable.size
                     friendlyArtists++
                 }
                 friendlyArtistsList.set(msg[5], secondsSinceEpoch())
@@ -116,7 +115,6 @@ function setupCanvas(id)
             {
                 for(let c = 0; c < data["cols"]; ++c)
                 {
-                    // TODO the chunks lag behind. It's not sufficient to use them
                     drawChunk(r, c, data["chunkSize"]);
                 }
             }
@@ -176,22 +174,24 @@ async function paintPixel(x, y, color)
 
 async function drawChunk(row, col, size)
 {
-    let chunk = await getChunk(row, col);
-    let view = new Int8Array(chunk);
-    let imageData = baseCtx.getImageData(col * size, row * size, size, size);
-    for (let idx in view)
+    getChunk(row, col).then(function (chunk)
     {
-        if (view[idx] <= 0) // for some reason there are negative values sometimes? e.g. -102
-            continue;
-        let color = palette[view[idx]];
-        if (typeof color === 'undefined')
-            console.log("hi")
-        imageData.data[idx * 4 + 0] = parseInt(color.slice(0, 2), 16);
-        imageData.data[idx * 4 + 1] = parseInt(color.slice(2, 4), 16);
-        imageData.data[idx * 4 + 2] = parseInt(color.slice(4, 6), 16);
-        imageData.data[idx * 4 + 3] = 255;
-    }
-    baseCtx.putImageData(imageData, col * size, row * size);
+        let view = new Uint8Array(chunk);
+        let imageData = baseCtx.getImageData(col * size, row * size, size, size);
+        for (let idx = 0; idx < view.length; idx++)
+        {
+            if (view[idx] === 0)
+                continue;
+            let color = palette[view[idx]];
+            if (typeof color === 'undefined')
+                console.log("handle")
+            imageData.data[idx * 4 + 0] = parseInt(color.slice(0, 2), 16);
+            imageData.data[idx * 4 + 1] = parseInt(color.slice(2, 4), 16);
+            imageData.data[idx * 4 + 2] = parseInt(color.slice(4, 6), 16);
+            imageData.data[idx * 4 + 3] = 255;
+        }
+        baseCtx.putImageData(imageData, col * size, row * size);
+    })
 }
 
 // drawChunk(0,0);

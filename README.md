@@ -2,6 +2,8 @@
 _Automated drawing interface for poap.art_
 
 This tool automates the drawing of images (later: text, ...) on the [poap.art website](poap.art).
+Simply drag-and-drop your image on the canvas and start drawing. It will approximate the colors to the limited set of 256,
+so the colors of your image might look a bit different than expected.
 
 ## Usage
 __I know this is ugly, it's still in development. It's just a PoC.__ \
@@ -19,8 +21,10 @@ You'll need python3 installed
 
 
 ## Contribute
-Unfortunately, the website isn't open source (let's hope it will be soon!), so I basically needed to rebuilt all the relevant parts of it.
-I'm no professional at reverse engineering websites and didn't even do anything with js really, so there's definetly a lot you could help with. \
+Unfortunately, [poap.art](poap.art) isn't open source (let's hope it will be soon!),
+so I basically needed to rebuilt all the relevant client parts of it.
+I'm no professional at reverse engineering websites and didn't even do anything with js before really,
+so there's definitely a lot you could help with. \
 most important tasks:
-- fix canvas construction: There's two apis which can be used to built the canvas, `chunk` and `pixel`. `pixel` is more of a live endpoint, but `chunk` seems to update less often (around once a day?). Most likely you can query these apis, I just didn't find out how yet.
-- refactor ui: I'm currently only focusing on core features (that's a lot) 
+- refactor ui: I'm currently only focusing on core features (that's a lot). I don't have the time atm to also learn
+react or vue.
