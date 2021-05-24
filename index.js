@@ -1,11 +1,12 @@
 const ethereumButton = document.getElementById('enableEthereumButton');
 const hideButton = document.getElementById('hideBtn');
+const exportButton = document.getElementById('exportBtn');
+const importButton = document.getElementById('importBtn');
 const signTypedDataV3Button = document.getElementById('signTypedDataV4Button');
 const startDraw = document.getElementById('startDraw');
 const baseCanvas = document.getElementById('baseCanvas');
 const drawCanvas = document.getElementById('drawCanvas');
 const friendlyTable = document.getElementById('FriendlyTable');
-
 
 let canvasId = "nKOjzq"
 let bearer = ""
@@ -17,6 +18,8 @@ let idx_array
 let addr
 let friendlyArtists = 0
 let enemyArtists = 0
+
+exportButton.disabled = true;
 
 let provider, ens
 async function setup()
@@ -91,12 +94,12 @@ async function onMessage (event) {
     if (msg[0] === "pixel")
     {
         drawPixel(msg[1], msg[2], msg[3]);
-        if (img.x <= msg[1] && msg[1] < img.x + img.image.width &&
-            img.y <= msg[2] && msg[2] < img.y + img.image.height)
+        if (img.x <= msg[1] && msg[1] < img.x + img.w &&
+            img.y <= msg[2] && msg[2] < img.y + img.h)
         {
             const col = drawCtx.getImageData(msg[1], msg[2], 1, 1).data;
             let color_idx = approximateColor(col[0], col[1], col[2])
-            let i = (msg[2] - img.y) * img.image.width + msg[1] - img.x
+            let i = (msg[2] - img.y) * img.w + msg[1] - img.x
             if (msg[3] !== color_idx)
             {
                 idx_array.push(i)
@@ -256,8 +259,8 @@ function resize() {
 
 function mouseOnImage()
 {
-    return img.x <= pos.x && pos.x <= img.x + img.image.width &&
-           img.y <= pos.y && pos.y <= img.y + img.image.height
+    return img.x <= pos.x && pos.x <= img.x + img.w &&
+           img.y <= pos.y && pos.y <= img.y + img.h
 }
 
 let ctrlPressed = false;
@@ -281,6 +284,10 @@ function mouseMove(event) {
 
     if (imageClicked)
     {
+        if (startDraw.textContent === "Stop Drawing")
+        {
+            return
+        }
         if (ctrlPressed)
         {
             const x_bef = pos.x;
@@ -288,22 +295,23 @@ function mouseMove(event) {
             setPosition(event);
             const diff = (pos.x - x_bef) + (pos.y - y_bef)
             drawCtx.clearRect(0,0, drawCanvas.width, drawCanvas.height);
-            img.image.width = diff >= 0 ? img.image.width * 1.01 : img.image.width * 0.99;
-            img.image.height = diff >= 0 ? img.image.height * 1.01 : img.image.height * 0.99;
-            drawCtx.drawImage(img.image, img.x, img.y, img.image.width, img.image.height);
+
+            img.w = Math.floor(diff >= 0 ? img.w * 1.01 : img.w * 0.99);
+            img.h = Math.floor(diff >= 0 ? img.h * 1.01 : img.h * 0.99);
+            drawCtx.drawImage(img.image, img.x, img.y, img.w, img.h);
             return;
         }
         drawCtx.clearRect(0,0, drawCanvas.width, drawCanvas.height);
-        const x_off = img.image.width - (img.x + img.image.width - pos.x)
-        const y_off = img.image.height - (img.y + img.image.height - pos.y)
+        const x_off = Math.floor(img.w - (img.x + img.w - pos.x))
+        const y_off = Math.floor(img.h - (img.y + img.h - pos.y))
         setPosition(event);
         img.x = Math.floor(pos.x - x_off);
         img.y = Math.floor(pos.y - y_off);
-        drawCtx.drawImage(img.image, img.x, img.y, img.image.width, img.image.height);
+        drawCtx.drawImage(img.image, img.x, img.y, img.w, img.h);
         drawCanvas.style.cursor = "move";
         return;
     }
-    if (event.buttons !== 1)
+    /*if (event.buttons !== 1)
         return;
     drawCtx.beginPath(); // begin
 
@@ -321,7 +329,7 @@ function mouseMove(event) {
         console.log("size: " + imageData.data.length / 4);
     }
 
-    drawCtx.stroke(); // draw it!
+    drawCtx.stroke(); // draw it!*/
 }
 
 ethereumButton.addEventListener('click', async () => {
@@ -475,11 +483,13 @@ startDraw.addEventListener('click', async function(event)
     {
         startDraw.style.backgroundColor = "green";
         startDraw.textContent = "3. Start Drawing!"
+        importButton.disabled = false
         return
     }
     startDraw.style.backgroundColor = "red";
     startDraw.textContent = "Stop Drawing"
-    const imgData = drawCtx.getImageData(img.x, img.y, img.image.width, img.image.height).data;
+    importButton.disabled = true
+    const imgData = drawCtx.getImageData(img.x, img.y, img.w, img.h).data;
     idx_array = [...Array(imgData.length / 4).keys()]
     const total = idx_array.length
     let progressBar = document.getElementById("progressbar").children
@@ -508,8 +518,8 @@ startDraw.addEventListener('click', async function(event)
         }
 
         let min_idx = approximateColor(red, green, blue)
-        const x = img.x + (i / 4 % img.image.width)
-        const y = img.y + Math.trunc(((i / 4) / img.image.width))
+        const x = img.x + (i / 4 % img.w)
+        const y = img.y + Math.trunc(((i / 4) / img.w))
         const col = await getCurrentColor(x, y);
         if (col !== palette[min_idx])
             await paintPixel(x, y, min_idx)
@@ -523,10 +533,20 @@ let img = {
     image: document.createElement("img"),
     x: 0,
     y: 0,
+    w: -1,
+    h: -1
 }
 img.image.addEventListener("load", function () {
-    //clearCanvas();
-    drawCtx.drawImage(img.image, img.x, img.y);
+    if (startDraw.textContent === "Stop Drawing")
+    {
+        return
+    }
+    if (img.w === -1 || img.h === -1) {
+        img.w = Math.floor(img.image.width)
+        img.h = Math.floor(img.image.height)
+    }
+    drawCtx.clearRect(0,0, drawCanvas.width, drawCanvas.height);
+    drawCtx.drawImage(img.image, img.x, img.y, img.w, img.h);
 }, false)
 
 // To enable drag and drop
@@ -537,7 +557,90 @@ drawCanvas.addEventListener("dragover", function (evt) {
 
 function loadWebImage(url)
 {
+    img.image.src = url;
+    img.image.crossOrigin = "Anonymous"
+    setExportButton(true)
+}
 
+function setExportButton(enabled)
+{
+    if (enabled)
+    {
+        exportButton.disabled = false
+        exportButton.innerText = 'Export'
+    }
+    else
+    {
+        exportButton.disabled = true
+        exportButton.innerText = 'Export (paste image from url)'
+    }
+}
+
+function copyTextToClipboard(text) {
+    // https://stackoverflow.com/questions/400212/how-do-i-copy-to-the-clipboard-in-javascript
+    var textArea = document.createElement("textarea");
+    textArea.value = text;
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    let successful = false
+    try {
+        successful = document.execCommand('copy');
+    } catch (err) {
+        console.log('Oops, unable to copy');
+    }
+    document.body.removeChild(textArea);
+    return successful
+}
+
+exportButton.addEventListener("click", async function(event) {
+    let exportStr = {
+        url: img.image.src,
+        x: img.x,
+        y: img.y,
+        w: img.w,
+        h: img.h
+    }
+    if (copyTextToClipboard(JSON.stringify(exportStr)))
+    {
+        exportButton.innerText = "Copied to clipboard!"
+    }
+    else
+    {
+        exportButton.innerText = "Error!"
+    }
+    await delay(3000)
+    setExportButton(true)
+})
+
+importButton.addEventListener("click", async function(event){
+    let config = document.getElementById('configImport').value
+    if (config === '')
+        return
+    try
+    {
+        let res = JSON.parse(config)
+        img.x = res.x
+        img.y = res.y
+        img.w = res.w
+        img.h = res.h
+        loadWebImage(res.url)
+    } catch(e) {
+        //
+    }
+})
+
+function isUrl(str)
+{
+    var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+        '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
+        '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+        '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+        '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+        '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+    return !!pattern.test(str);
 }
 
 drawCanvas.addEventListener("drop", function (evt) {
@@ -547,13 +650,28 @@ drawCanvas.addEventListener("drop", function (evt) {
         if (typeof FileReader !== "undefined" && file.type.indexOf("image") != -1) {
             var reader = new FileReader();
 // Note: addEventListener doesn't work in Google Chrome for this event
-            reader.onload = function (evt) {
-                img.x = Math.floor(pos.x);
-                img.y = Math.floor(pos.y);
-                img.image.src = evt.target.result;
+            reader.onload = function (evt2) {
+                img.x = evt.pageX;
+                img.y = evt.pageY;
+                img.w = -1
+                img.h = -1
+                img.image.src = evt2.target.result;
+                setExportButton(false);
             };
             reader.readAsDataURL(file);
         }
+    }
+    else if (evt.dataTransfer.items.length > 1)
+    {
+        function loadImage(str)
+        {
+            img.x = evt.pageX
+            img.y = evt.pageY
+            img.w = -1
+            img.h = -1
+            loadWebImage(str)
+        }
+        evt.dataTransfer.items[1].getAsString(loadImage)
     }
     evt.preventDefault();
 }, false);
