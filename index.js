@@ -470,6 +470,8 @@ startDraw.addEventListener('click', async function(event)
     startDraw.textContent = "Stop Drawing"
     const imgData = drawCtx.getImageData(img.x, img.y, img.image.width, img.image.height).data;
     idx_array = [...Array(imgData.length / 4).keys()]
+    const total = idx_array.length
+    let progressBar = document.getElementById("progressbar").children
     for (;;)
     {
         if (startDraw.textContent !== "Stop Drawing")
@@ -479,6 +481,9 @@ startDraw.addEventListener('click', async function(event)
             await delay(1000)
             continue
         }
+        let percent = 100 * (total - idx_array.length) / total
+        progressBar[1].style.width = percent + '%'
+        progressBar[0].innerHTML = percent.toFixed(2) + "% drawn"
         let idx = getRandomInt(idx_array.length)
         let i = idx_array[idx] * 4
         const red = imgData[i];

@@ -4,14 +4,8 @@ canvas {
     float: top;
 }
 
-#abc
-{
-    background-color: black;
-}
-
 .btn {
     width: 100%;
-    font-size: 50px;
 }
 
 #startDraw
@@ -75,4 +69,33 @@ div#EnemyArtists
     float: right;
     background-color: red;
     width: 50%;
+}
+
+html *
+{
+    font-size: 50px;
+}
+
+#progressbar {
+    border-style: solid;
+    /* (height of inner div) / 2 + padding */
+    padding: 3px;
+    text-align: center;
+}
+
+
+#progressbar>span {
+    /* Adjust with JavaScript */
+    width: 100%;
+    height: 50px;
+    position:absolute;
+    left:0;
+    right:0;
+}
+
+#progressbar>div {
+    background-color: lightgreen;
+    /* Adjust with JavaScript */
+    width: 100%;
+    height: 50px;
 }

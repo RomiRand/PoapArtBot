@@ -13,22 +13,28 @@
         <button class="btn" type="button" id="signTypedDataV4Button">2. Login (need POAP)</button>
         <button class="btn" type="button" id="startDraw">3. Start Drawing!</button>
         <button class="btn" type="button" id="hideBtn">Hide</button>
+        <div id="progressbar">
+            <span>100% drawn</span>
+            <div></div>
+        </div>
     </div>
-    <div id="FriendlyArtists">
-        <table id="FriendlyTable">
-            <tr>
-                <th>You are drawing with</th>
-            </tr>
-            <tbody id="friendlyTableBody"></tbody>
-        </table>
-    </div>
-    <div id="EnemyArtists">
-        <table id="EnemyTable">
-            <tr>
-                <th>You are drawing against</th>
-            </tr>
-            <tbody id="enemyTableBody"></tbody>
-        </table>
+    <div>
+        <div id="FriendlyArtists">
+            <table id="FriendlyTable">
+                <tr>
+                    <th>You are drawing with</th>
+                </tr>
+                <tbody id="friendlyTableBody"></tbody>
+            </table>
+        </div>
+        <div id="EnemyArtists">
+            <table id="EnemyTable">
+                <tr>
+                    <th>You are drawing against</th>
+                </tr>
+                <tbody id="enemyTableBody"></tbody>
+            </table>
+        </div>
     </div>
     <script type="module" src="index.js"></script>
     <script type="text/javascript" src="ethjs-util.js"></script>
