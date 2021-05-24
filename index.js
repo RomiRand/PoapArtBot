@@ -6,6 +6,7 @@ const baseCanvas = document.getElementById('baseCanvas');
 const drawCanvas = document.getElementById('drawCanvas');
 const friendlyTable = document.getElementById('FriendlyTable');
 
+
 let canvasId = "nKOjzq"
 let bearer = ""
 let baseUrl = "https://api-sandbox.poap.art/"
@@ -16,6 +17,31 @@ let idx_array
 let addr
 let friendlyArtists = 0
 let enemyArtists = 0
+
+let provider, ens
+async function setup()
+{
+    provider = await detectEthereumProvider()
+    ens = new EthENS.Ens({ provider, network: '1' });
+}
+
+setup()
+
+async function reverse(addr)
+{
+    if (!provider)
+    {
+        return addr
+    }
+
+    return await ens.reverse(addr)
+        .then((name) => {
+            return name
+        })
+        .catch((reason) => {
+            return addr
+    })
+}
 
 function secondsSinceEpoch()
 {
@@ -44,7 +70,7 @@ async function setTable(id)
         map = enemyArtistsList
     }
 
-    function logMapElements(value, key, map) {
+    async function logMapElements(value, key, map) {
         let row = tbody.insertRow(0);
         let cell = row.insertCell(0)
         cell.innerHTML = key
@@ -60,7 +86,7 @@ let enemyArtistsList = new Map()
 setTable('friendlyTableBody')
 setTable('enemyTableBody')
 
-function onMessage (event) {
+async function onMessage (event) {
     let msg = JSON.parse(event.data);
     if (msg[0] === "pixel")
     {
@@ -75,17 +101,17 @@ function onMessage (event) {
             {
                 idx_array.push(i)
                 enemyArtists++; // filter ourselves ?
-                enemyArtistsList.set(msg[5], secondsSinceEpoch())
+                enemyArtistsList.set(await reverse(msg[5]), secondsSinceEpoch())
             }
             else
             {
                 idx_array.splice(idx_array.indexOf(i), 1)
                 if (msg[5].toUpperCase() !== addr.toUpperCase())
                 {
-                    console.log("someone helped, thanks!")
                     friendlyArtists++
                 }
-                friendlyArtistsList.set(msg[5], secondsSinceEpoch())
+            // TODO add ens cache
+                friendlyArtistsList.set(await reverse(msg[5]), secondsSinceEpoch())
             }
         }
     }
@@ -406,21 +432,6 @@ async function getCurrentColor(x, y)
     return (imageData[0].toString(16).padStart(2, '0') +
         imageData[1].toString(16).padStart(2, '0') +
         imageData[2].toString(16).padStart(2, '0')).toUpperCase()
-
-    // request API
-    /*const result = await fetch(
-        baseUrl + canvasId + "/pixel/" + x + "," + y,
-        {
-            headers: {
-                accept: "application/json, text/plain",
-            },
-            method: "GET",
-        }
-    );
-    if (result.headers.get("Content-Type") != "application/json; charset=utf-8")
-        return 0;
-    const json = await result.json();
-    return json.color;*/
 }
 
 function delay(ms) {
@@ -483,7 +494,7 @@ startDraw.addEventListener('click', async function(event)
         }
         let percent = 100 * (total - idx_array.length) / total
         progressBar[1].style.width = percent + '%'
-        progressBar[0].innerHTML = percent.toFixed(2) + "% drawn"
+        progressBar[0].innerHTML = percent.toFixed(2) + "% drawn (" + (total - idx_array.length) + "/" + total + " Pixel)"
         let idx = getRandomInt(idx_array.length)
         let i = idx_array[idx] * 4
         const red = imgData[i];
@@ -523,6 +534,11 @@ drawCanvas.addEventListener("dragover", function (evt) {
     evt.preventDefault();
 }, false);
 
+
+function loadWebImage(url)
+{
+
+}
 
 drawCanvas.addEventListener("drop", function (evt) {
     var files = evt.dataTransfer.files;
