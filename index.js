@@ -8,9 +8,9 @@ const baseCanvas = document.getElementById('baseCanvas');
 const drawCanvas = document.getElementById('drawCanvas');
 const friendlyTable = document.getElementById('FriendlyTable');
 
-let canvasId = "nKOjzq"
+let canvasId = "week-21"
 let bearer = ""
-let baseUrl = "https://api-sandbox.poap.art/"
+let baseUrl = "https://api-sandbox.poap.art/canvas/"
 let chunkSize = 0
 let rows = 0
 let cols = 0
@@ -51,7 +51,7 @@ function secondsSinceEpoch()
     return Math.round(Date.now()) - 15 * 60 * 1000
 }
 
-let webSocket = new WebSocket("wss://api-sandbox.poap.art/" + canvasId);//?since=" + secondsSinceEpoch.toString(16));
+let webSocket = new WebSocket("wss://api-sandbox.poap.art/canvas/" + canvasId);//?since=" + secondsSinceEpoch.toString(16));
 webSocket.addEventListener("message", onMessage);
 webSocket.addEventListener("open", onOpen);
 function onOpen (event) {
