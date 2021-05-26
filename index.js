@@ -1,9 +1,7 @@
-const ethereumButton = document.getElementById('enableEthereumButton');
+const connectButton = document.getElementById('connectButton');
 const hideButton = document.getElementById('hideBtn');
 const exportButton = document.getElementById('exportBtn');
 const importButton = document.getElementById('importBtn');
-const signTypedDataV3Button = document.getElementById('signTypedDataV4Button');
-const startDraw = document.getElementById('startDraw');
 const baseCanvas = document.getElementById('baseCanvas');
 const drawCanvas = document.getElementById('drawCanvas');
 const friendlyTable = document.getElementById('FriendlyTable');
@@ -16,35 +14,8 @@ let rows = 0
 let cols = 0
 let idx_array
 let addr
-let friendlyArtists = 0
-let enemyArtists = 0
 
 exportButton.disabled = true;
-
-let provider, ens
-async function setup()
-{
-    provider = await detectEthereumProvider()
-    ens = new EthENS.Ens({ provider, network: '1' });
-}
-
-setup()
-
-async function reverse(addr)
-{
-    if (!provider)
-    {
-        return addr
-    }
-
-    return await ens.reverse(addr)
-        .then((name) => {
-            return name
-        })
-        .catch((reason) => {
-            return addr
-    })
-}
 
 function secondsSinceEpoch()
 {
@@ -74,9 +45,11 @@ async function setTable(id)
     }
 
     async function logMapElements(value, key, map) {
-        let row = tbody.insertRow(0);
-        let cell = row.insertCell(0)
-        cell.innerHTML = key
+        let row = tbody.insertRow(0)
+        let addr = row.insertCell(0)
+        addr.innerHTML = key
+        let count = row.insertCell(1)
+        count.innerHTML = value[1]
     }
     map.forEach(logMapElements)
 
@@ -100,21 +73,37 @@ async function onMessage (event) {
             const col = drawCtx.getImageData(msg[1], msg[2], 1, 1).data;
             let color_idx = approximateColor(col[0], col[1], col[2])
             let i = (msg[2] - img.y) * img.w + msg[1] - img.x
+            let wallet
+            if (msg[6])
+                wallet = msg[6]
+            else
+                wallet = msg[5]
+            // filter ourselves ?
             if (msg[3] !== color_idx)
             {
                 idx_array.push(i)
-                enemyArtists++; // filter ourselves ?
-                enemyArtistsList.set(await reverse(msg[5]), secondsSinceEpoch())
+                let new_count = 0
+                let old_count = enemyArtistsList.get(wallet)
+                if (old_count)
+                {
+                    new_count = old_count[1] + 1
+                }
+                enemyArtistsList.set(wallet, [secondsSinceEpoch(), new_count])
             }
             else
             {
                 idx_array.splice(idx_array.indexOf(i), 1)
                 if (msg[5].toUpperCase() !== addr.toUpperCase())
                 {
-                    friendlyArtists++
+                    // filter ourselves ?
                 }
-            // TODO add ens cache
-                friendlyArtistsList.set(await reverse(msg[5]), secondsSinceEpoch())
+                let new_count = 0
+                let old_count = friendlyArtistsList.get(wallet)
+                if (old_count)
+                {
+                    new_count = old_count[1] + 1
+                }
+                friendlyArtistsList.set(wallet, [secondsSinceEpoch(), new_count])
             }
         }
     }
@@ -137,9 +126,10 @@ function setupCanvas(id)
     fetch(url)
         .then(response => response.json())
         .then(function(data) {
-            let res = data["rows"] * data["chunkSize"];
-            ethereumButton.style.width = res / 4;
-            ethereumButton.style.height = res / 8;
+            baseCanvas.width = data["rows"] * data["chunkSize"]
+            baseCanvas.height = data["cols"] * data["chunkSize"]
+            drawCanvas.width = data["rows"] * data["chunkSize"]
+            drawCanvas.height = data["cols"] * data["chunkSize"]
             for (let r = 0; r < data["rows"]; ++r)
             {
                 for(let c = 0; c < data["cols"]; ++c)
@@ -232,6 +222,28 @@ document.addEventListener('mousemove', mouseMove);
 document.addEventListener('mousedown', mouseDown);
 document.addEventListener('mouseup', resetCursor);
 document.addEventListener('mouseenter', setPosition);
+drawCanvas.addEventListener('wheel', zoom);
+
+let scale = 1;
+let baseW = 4096
+let baseH = 4096
+var tempCanvas=document.createElement("canvas");
+var tctx=tempCanvas.getContext("2d");
+function zoom(event) {
+    /*event.preventDefault();
+
+    scale += event.deltaY * -0.001;
+    scale = Math.min(Math.max(0.5, scale), 128);
+    var el = document.getElementById("can")
+    drawCanvas.style.transform = `scale(${scale})`;
+    baseCanvas.style.transform = `scale(${scale})`;
+    //el.style.transform = `scale(${scale})`;
+
+    baseCanvas.width = baseW * scale;
+    baseCanvas.height = baseH * scale;
+    drawCanvas.width = baseW * scale;
+    drawCanvas.height = baseH * scale;*/
+}
 
 function resetCursor(event)
 {
@@ -284,7 +296,7 @@ function mouseMove(event) {
 
     if (imageClicked)
     {
-        if (startDraw.textContent === "Stop Drawing")
+        if (drawing)
         {
             return
         }
@@ -331,36 +343,136 @@ function mouseMove(event) {
 
     drawCtx.stroke(); // draw it!*/
 }
-
-ethereumButton.addEventListener('click', async () => {
-    //Will Start the metamask extension
-    await ethereum.request({ method: 'eth_requestAccounts' });
+drawCanvas.style.opacity = '50%'
+hideButton.addEventListener('click', async () => {
+    updateButtons(true)
 });
 
-hideButton.addEventListener('click', async () => {
-    if (hideButton.textContent === "Hide")
+function updateButtons(next)
+{
+    if (next)
     {
-        hideButton.textContent = "Show";
-        hideButton.style.backgroundColor = "green";
-        drawCanvas.style.opacity = "0%";
+        if (drawCanvas.style.opacity === '0') {
+            hideButton.style.backgroundColor = "yellow";
+            drawCanvas.style.opacity = "50%";
+        } else if (drawCanvas.style.opacity === '0.5') {
+            hideButton.style.backgroundColor = "lightgreen";
+            drawCanvas.style.opacity = "100%";
+        } else {
+            hideButton.style.backgroundColor = "indianred";
+            drawCanvas.style.opacity = "0%";
+        }
     }
-    else if (hideButton.textContent === "Show")
+    showBottomBar(drawCanvas.style.opacity !== "0")
+}
+
+function showBottomBar(show)
+{
+    let vis
+    if (show)
+        vis = "visible"
+    else
+        vis = "hidden"
+
+    let befImport = document.getElementsByClassName("beforeImport");
+    for (let i = 0; i < befImport.length; i++) {
+        befImport[i].style.visibility = vis
+    }
+    if (img.image.src !== "")
     {
-        hideButton.textContent = "Opaque";
-        hideButton.style.backgroundColor = "yellow";
-        drawCanvas.style.opacity = "100%";
+        let aftImport = document.getElementsByClassName("afterImport");
+        for (let i = 0; i < aftImport.length; i++) {
+            aftImport[i].style.visibility = vis
+        }
+    }
+}
+
+async function isConnected()
+{
+    let res = await ethereum.request({method: 'eth_accounts'})
+    return res.length > 0
+}
+
+let error = false
+updateConnectButton()
+
+async function updateConnectButton()
+{
+    if (error)
+    {
+        connectButton.innerHTML = "error, reload page"
+    }
+    else if (!await isConnected())
+    {
+        connectButton.innerHTML = "connect"
+        connectButton.disabled = false
+    }
+    else if (bearer === "")
+    {
+        connectButton.innerHTML = '"sign" in'
+        connectButton.disabled = false
+    }
+    else if (img.image.src === "")
+    {
+        connectButton.innerHTML = "Drop or import image"
+        connectButton.disabled = true
+    }
+    else if (!drawing)
+    {
+        let befImport = document.getElementsByClassName("beforeImport")[0]
+        for (let i = 0; i < befImport.children.length; i++) {
+            befImport.children[i].disabled = false
+        }
+        connectButton.className = 'mmBtn'
+        connectButton.innerHTML = 'draw!'
+        connectButton.disabled = false
     }
     else
     {
-        hideButton.textContent = "Hide";
-        hideButton.style.backgroundColor = "red";
-        drawCanvas.style.opacity = "50%";
+        let befImport = document.getElementsByClassName("beforeImport")[0]
+        for (let i = 0; i < befImport.children.length; i++) {
+            befImport.children[i].disabled = true
+        }
+        connectButton.innerHTML = ''
+        connectButton.className = 'mmBtnDrawing'
+    }
+}
+
+connectButton.addEventListener('click', async () => {
+    if (connectButton.innerHTML === "connect")
+    {
+        ethereum.request({ method: 'eth_requestAccounts' }).then(function(){
+            updateConnectButton()
+        })
+    }
+    else if (connectButton.innerHTML === '"sign" in')
+    {
+        singIn().then(function(){
+            updateConnectButton()
+        })
+    }
+    else if (connectButton.innerHTML === "draw!")
+    {
+        draw().catch(function() {
+            drawing = false
+            updateConnectButton()
+        })
+        updateConnectButton()
+    }
+    else if (connectButton.className === 'mmBtnDrawing')
+    {
+        drawing = false
+        updateConnectButton()
+    }
+    else
+    {
+        error = true
+        updateConnectButton()
     }
 });
 
-signTypedDataV3Button.addEventListener('click', async function(event) {
-    event.preventDefault()
-
+async function singIn()
+{
     const accounts = await ethereum.request({ method: 'eth_accounts' });
     addr = EthJS.Util.toChecksumAddress(accounts[0])
 
@@ -386,8 +498,8 @@ signTypedDataV3Button.addEventListener('click', async function(event) {
         },
         primaryType: "Paint",
         message:{
-            art_title:"Week 20 - 2021",
-            art_id:"nKOjzq",
+            art_title: "Week 21 - 2021",
+            art_id: canvasId,
             artist_address: addr
         }
     });
@@ -402,7 +514,7 @@ signTypedDataV3Button.addEventListener('click', async function(event) {
             from: addr,
             id: 1
         }
-    ).then(function (result, err) {
+    ).then(async function (result, err) {
         if (err)
             return console.dir(err);
         if (result.error) {
@@ -424,14 +536,13 @@ signTypedDataV3Button.addEventListener('click', async function(event) {
                 'Content-Type': 'application/json'
             }
         }
-        fetch(url, params)
+        await fetch(url, params)
             .then(data=>{return data.json()})
             .then(res=>{
                 bearer = res["accessToken"];
             });
-
     })
-});
+}
 
 async function getCurrentColor(x, y)
 {
@@ -477,25 +588,17 @@ function approximateColor(r, g, b)
     return min_idx;
 }
 
-startDraw.addEventListener('click', async function(event)
+let drawing = false
+async function draw()
 {
-    if (startDraw.textContent === "Stop Drawing")
-    {
-        startDraw.style.backgroundColor = "green";
-        startDraw.textContent = "3. Start Drawing!"
-        importButton.disabled = false
-        return
-    }
-    startDraw.style.backgroundColor = "red";
-    startDraw.textContent = "Stop Drawing"
-    importButton.disabled = true
+    drawing = true
     const imgData = drawCtx.getImageData(img.x, img.y, img.w, img.h).data;
     idx_array = [...Array(imgData.length / 4).keys()]
     const total = idx_array.length
     let progressBar = document.getElementById("progressbar").children
     for (;;)
     {
-        if (startDraw.textContent !== "Stop Drawing")
+        if (!drawing)   // shouldn't be set from outside...
             break
         if (idx_array.length === 0)
         {
@@ -526,7 +629,7 @@ startDraw.addEventListener('click', async function(event)
         else
             idx_array.splice(idx,1)
     }
-})
+}
 
 // Image for loading
 let img = {
@@ -537,7 +640,7 @@ let img = {
     h: -1
 }
 img.image.addEventListener("load", function () {
-    if (startDraw.textContent === "Stop Drawing")
+    if (drawing)
     {
         return
     }
@@ -547,6 +650,8 @@ img.image.addEventListener("load", function () {
     }
     drawCtx.clearRect(0,0, drawCanvas.width, drawCanvas.height);
     drawCtx.drawImage(img.image, img.x, img.y, img.w, img.h);
+    updateButtons()
+    updateConnectButton()
 }, false)
 
 // To enable drag and drop

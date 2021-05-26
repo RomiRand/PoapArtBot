@@ -4,30 +4,36 @@
 <head>
 </head>
 <body>
-    <div class="canvas">
-        <canvas id="baseCanvas" width="4096" height="4096" style="border:1px solid #000000;"></canvas>
-        <canvas id="drawCanvas" width="4096" height="4096" style="border:1px solid #000000;"></canvas>
+    <div id="can" class="canvas">
+        <canvas id="baseCanvas"></canvas>
+        <canvas id="drawCanvas"></canvas>
+    </div>
+    <div class="metamaskConnect">
+        <button class = "mmBtn" id="connectButton">Connect</button>
+        <button class = "mmBtn" id="hideBtn"></button>
     </div>
     <div class="btns">
-        <button class="btn" type="button" id="enableEthereumButton">1. Enable Ethereum</button>
-        <button class="btn" type="button" id="signTypedDataV4Button">2. "Sign" in (need POAP)</button>
-        <button class="btn" type="button" id="startDraw">3. Start Drawing!</button>
-        <button class="btn" type="button" id="hideBtn">Hide</button>
-        <button class="btn" type="button" id="exportBtn">Export (paste image from url)</button>
-        <div id="progressbar">
-            <span>100% drawn</span>
-            <div></div>
+        <div class="afterImport">
+            <button class="btn" type="button" id="exportBtn">Export (paste image from url)</button>
+            <div id="progressbar">
+                <span>0% drawn</span>
+                <div></div>
+            </div>
         </div>
-    </div>
-    <div>
-        <input type="text" id="configImport" placeholder="Import image config...">
-        <button class="btn" type="button" id="importBtn">Import</button>
+        <div class = "beforeImport">
+            <input type="text" id="configImport" placeholder="Import image config...">
+            <button class="btn" type="button" id="importBtn">Import</button>
+        </div>
     </div>
     <div>
         <div id="FriendlyArtists">
             <table id="FriendlyTable">
                 <tr>
-                    <th>You are drawing with</th>
+                    <th colspan="2">You are drawing with</th>
+                </tr>
+                <tr>
+                    <th>Address</th>
+                    <th>Count</th>
                 </tr>
                 <tbody id="friendlyTableBody"></tbody>
             </table>
@@ -35,7 +41,11 @@
         <div id="EnemyArtists">
             <table id="EnemyTable">
                 <tr>
-                    <th>You are drawing against</th>
+                    <th colspan="2">You are drawing against</th>
+                </tr>
+                <tr>
+                    <th>Address</th>
+                    <th>Count</th>
                 </tr>
                 <tbody id="enemyTableBody"></tbody>
             </table>
