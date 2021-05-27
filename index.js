@@ -4,7 +4,7 @@ const exportButton = document.getElementById('exportBtn');
 const importButton = document.getElementById('importBtn');
 const baseCanvas = document.getElementById('baseCanvas');
 const drawCanvas = document.getElementById('drawCanvas');
-const friendlyTable = document.getElementById('FriendlyTable');
+const drawModeButton = document.getElementById('drawModeBtn');
 
 let canvasId = "week-21"
 let bearer = ""
@@ -414,6 +414,7 @@ async function updateConnectButton()
     }
     else if (img.image.src === "")
     {
+        drawModeButton.style.visibility = "hidden"
         connectButton.innerHTML = "Drop or import image"
         connectButton.disabled = true
     }
@@ -423,6 +424,7 @@ async function updateConnectButton()
         for (let i = 0; i < befImport.children.length; i++) {
             befImport.children[i].disabled = false
         }
+        drawModeButton.style.visibility = "visible"
         connectButton.className = 'mmBtn'
         connectButton.innerHTML = 'draw!'
         connectButton.disabled = false
@@ -547,6 +549,8 @@ async function singIn()
 async function getCurrentColor(x, y)
 {
     const imageData = baseCtx.getImageData(x, y, 1, 1).data
+    if (imageData[3] === 0) // transparent background => white
+        return "FFFFFF"
 
     return (imageData[0].toString(16).padStart(2, '0') +
         imageData[1].toString(16).padStart(2, '0') +
@@ -588,6 +592,7 @@ function approximateColor(r, g, b)
     return min_idx;
 }
 
+let drawMode = "random"
 let drawing = false
 async function draw()
 {
@@ -608,7 +613,11 @@ async function draw()
         let percent = 100 * (total - idx_array.length) / total
         progressBar[1].style.width = percent + '%'
         progressBar[0].innerHTML = percent.toFixed(2) + "% drawn (" + (total - idx_array.length) + "/" + total + " Pixel)"
-        let idx = getRandomInt(idx_array.length)
+        let idx
+        if (drawMode === "random")
+            idx = getRandomInt(idx_array.length)
+        else if (drawMode === "rows")
+            idx = 0
         let i = idx_array[idx] * 4
         const red = imgData[i];
         const green = imgData[i + 1];
@@ -780,3 +789,12 @@ drawCanvas.addEventListener("drop", function (evt) {
     }
     evt.preventDefault();
 }, false);
+
+drawModeButton.addEventListener("click", async function(event)
+{
+    if (drawMode === "random")
+        drawMode = "rows"
+    else if (drawMode === "rows")
+        drawMode = "random"
+    drawModeButton.innerText = drawMode
+})

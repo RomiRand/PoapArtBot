@@ -17,14 +17,13 @@ try to explain everything in detail.
 - Open a terminal:
   - Linux: hit `CTRL + SHFT + T`
   - Windows: go to windows -> type `cmd` -> hit enter
-- You'll need python3 and git installed
-  - Linux: `sudo apt-get install -y python3 git`
-  - Windows: TODO
+- You'll need python3 and git installed. Google will help you installing these.
 
 ### Install
 1. Download the repository (to your current directory): `git clone https://github.com/RomiRand/PoapArtBot.git`
 2. Change directory: `cd PoapArtBot`
 2. Start the local HTTP-Server via python: `./StartBot.sh`
+   - If python isn't detected even though you installed it, change `python` to `python3` (worked for me on windows)
 
 ## Usage
 0. Visit the page: [localhost:8080](localhost:8080)
@@ -38,9 +37,13 @@ try to explain everything in detail.
 4. Once you're happy, hit `draw!`
 5. You can draw together with your friends (__Your image needs to be from the internet__). Click `Export`
    at the bottom to copy your image configuration to your clipboard. Anyone you send it to can help you now.
-6. Monitor the drawing status via the progress bar at the bottom. Below the canvas you can also find a
-   detailed list of all "friendly and hostile" artists (collected locally after you start drawing).
-7. Don't forget to stop your HTTP-Server when you're done: Hit `Ctrl + c` in the terminal window
+   You can also use this config yourself (e.g. to continue drawing after a pause).
+   If you are drawing with others, it's advised to draw random pixels.
+6. Monitor the drawing status via the progress bar at the bottom. You can also keep it running after you reached
+   100% to protect it from pixel attackers!
+7. Below the canvas you can find a detailed list of all "friendly and hostile" artists
+   (collected locally after you start drawing).
+8. Don't forget to stop your HTTP-Server when you're done: Hit `Ctrl + c` in the terminal window
 
 ![Bot drawing statistics](doc/stats.png "Bot drawing statistics")
 
