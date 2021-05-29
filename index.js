@@ -306,10 +306,27 @@ function mouseMove(event) {
             const y_bef = pos.y;
             setPosition(event);
             const diff = (pos.x - x_bef) + (pos.y - y_bef)
-            drawCtx.clearRect(0,0, drawCanvas.width, drawCanvas.height);
 
-            img.w = Math.floor(diff >= 0 ? img.w * 1.01 : img.w * 0.99);
-            img.h = Math.floor(diff >= 0 ? img.h * 1.01 : img.h * 0.99);
+            if (diff > 0)
+            {
+                scale += 0.01
+            }
+            else if (diff < 0)
+            {
+                scale -= 0.01
+            }
+            //scale += diff >= 0 ? 0.01 : -0.01;
+
+            let new_w = Math.round(img.image.naturalWidth * scale);
+            let new_h = Math.round(img.image.naturalHeight * scale);
+            if (new_w <= 0 || new_h <= 0)
+            {
+                return;
+            }
+
+            img.w = new_w
+            img.h = new_h
+            drawCtx.clearRect(0,0, drawCanvas.width, drawCanvas.height);
             drawCtx.drawImage(img.image, img.x, img.y, img.w, img.h);
             return;
         }
@@ -654,9 +671,11 @@ img.image.addEventListener("load", function () {
         return
     }
     if (img.w === -1 || img.h === -1) {
-        img.w = Math.floor(img.image.width)
-        img.h = Math.floor(img.image.height)
+        img.w = img.image.width
+        img.h = img.image.height
     }
+    // assume same scaling for height
+    scale = img.w / img.image.naturalWidth
     drawCtx.clearRect(0,0, drawCanvas.width, drawCanvas.height);
     drawCtx.drawImage(img.image, img.x, img.y, img.w, img.h);
     updateButtons()
