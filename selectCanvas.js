@@ -1,5 +1,5 @@
 function loadAllCanvas() {
-    let url = "https://api-sandbox.poap.art/canvas"
+    let url = "https://api.poap.art/canvas"
     fetch(url)
         .then(response => response.json())
         .then(function(data) {
