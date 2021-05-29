@@ -6,12 +6,12 @@ const baseCanvas = document.getElementById('baseCanvas');
 const drawCanvas = document.getElementById('drawCanvas');
 const drawModeButton = document.getElementById('drawModeBtn');
 
-let canvasId = "week-21"
+const queryString = window.location.search
+const urlParams = new URLSearchParams(queryString)
+const canvasId = urlParams.get('canvasId')
+
 let bearer = ""
 let baseUrl = "https://api-sandbox.poap.art/canvas/"
-let chunkSize = 0
-let rows = 0
-let cols = 0
 let idx_array
 let addr
 
@@ -118,14 +118,20 @@ async function onMessage (event) {
         console.log(msg[0]);
 }
 
-function setupCanvas(id)
+function setupCanvas()
 {
-    if (id === "")
+    if (canvasId === "")
         return;
     let url = baseUrl + canvasId
     fetch(url)
-        .then(response => response.json())
-        .then(function(data) {
+        .then(response =>
+        {
+            if (!response.ok) {
+                throw new Error("check canvas id")
+            }
+            return response.json();
+        })
+        .then(data => {
             baseCanvas.width = data["rows"] * data["chunkSize"]
             baseCanvas.height = data["cols"] * data["chunkSize"]
             drawCanvas.width = data["rows"] * data["chunkSize"]
@@ -137,10 +143,13 @@ function setupCanvas(id)
                     drawChunk(r, c, data["chunkSize"]);
                 }
             }
+        })
+        .catch((error) => {
+            alert(error);
         });
 }
 
-setupCanvas("nKOjzq");
+setupCanvas();
 
 let baseCtx = baseCanvas.getContext("2d");
 let drawCtx = drawCanvas.getContext("2d");
@@ -222,28 +231,10 @@ document.addEventListener('mousemove', mouseMove);
 document.addEventListener('mousedown', mouseDown);
 document.addEventListener('mouseup', resetCursor);
 document.addEventListener('mouseenter', setPosition);
-drawCanvas.addEventListener('wheel', zoom);
 
 let scale = 1;
-let baseW = 4096
-let baseH = 4096
 var tempCanvas=document.createElement("canvas");
 var tctx=tempCanvas.getContext("2d");
-function zoom(event) {
-    /*event.preventDefault();
-
-    scale += event.deltaY * -0.001;
-    scale = Math.min(Math.max(0.5, scale), 128);
-    var el = document.getElementById("can")
-    drawCanvas.style.transform = `scale(${scale})`;
-    baseCanvas.style.transform = `scale(${scale})`;
-    //el.style.transform = `scale(${scale})`;
-
-    baseCanvas.width = baseW * scale;
-    baseCanvas.height = baseH * scale;
-    drawCanvas.width = baseW * scale;
-    drawCanvas.height = baseH * scale;*/
-}
 
 function resetCursor(event)
 {

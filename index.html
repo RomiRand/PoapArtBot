@@ -1,60 +1,16 @@
 <!DOCTYPE html>
 <html>
-    <link rel="stylesheet" type="text/css" href="./styles.css">
+<link rel="stylesheet" type="text/css" href="./styles.css">
 <head>
 </head>
 <body>
-    <div id="can" class="canvas">
-        <canvas id="baseCanvas"></canvas>
-        <canvas id="drawCanvas"></canvas>
-    </div>
-    <div class="metamaskConnect">
-        <button class = "mmBtn" id="connectButton">Connect</button>
-        <button class = "mmBtn" id="hideBtn"></button>
-        <button class = "mmBtn" id="drawModeBtn">random</button>
-    </div>
-    <div class="btns">
-        <div class="afterImport">
-            <button class="btn" type="button" id="exportBtn">Export (paste image from url)</button>
-            <div id="progressbar">
-                <span>0% drawn</span>
-                <div></div>
-            </div>
-        </div>
-        <div class = "beforeImport">
-            <input type="text" id="configImport" placeholder="Import image config...">
-            <button class="btn" type="button" id="importBtn">Import</button>
-        </div>
-    </div>
-    <div>
-        <div id="FriendlyArtists">
-            <table id="FriendlyTable">
-                <tr>
-                    <th colspan="2">You are drawing with</th>
-                </tr>
-                <tr>
-                    <th>Address</th>
-                    <th>Count</th>
-                </tr>
-                <tbody id="friendlyTableBody"></tbody>
-            </table>
-        </div>
-        <div id="EnemyArtists">
-            <table id="EnemyTable">
-                <tr>
-                    <th colspan="2">You are drawing against</th>
-                </tr>
-                <tr>
-                    <th>Address</th>
-                    <th>Count</th>
-                </tr>
-                <tbody id="enemyTableBody"></tbody>
-            </table>
-        </div>
-    </div>
-    <script src="https://unpkg.com/@metamask/detect-provider/dist/detect-provider.min.js"></script>
-    <script type="text/javascript" src="ethjs-ens.js"></script>
-    <script type="text/javascript" src="index.js"></script>
-    <script type="text/javascript" src="ethjs-util.js"></script>
+    <p><b>CANVAS SELECT SCREEN</b></p>
+    <p><b>Closed</b></p>
+    <div id="Closed"></div>
+    <p><b>Open</b></p>
+    <div id="Open"></div>
+    <p><b>Soon</b></p>
+    <div id="Soon"></div>
+    <script type="text/javascript" src="selectCanvas.js"></script>
 </body>
 </html>

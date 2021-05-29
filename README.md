@@ -11,8 +11,7 @@ __This tool is still in an early version. It was hacked together in a very short
 Feel free to report issues and/or help developing.__
 
 ## Installation
-At the moment this is hardcoded for the ongoing weekly sandbox canvas. For now you'll need to use a terminal, I'll
-try to explain everything in detail.
+For now you'll need to use a terminal, I'll try to explain everything in detail.
 ### Prerequisites
 - Open a terminal:
   - Linux: hit `CTRL + SHFT + T`
