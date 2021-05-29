@@ -5,6 +5,7 @@ const importButton = document.getElementById('importBtn');
 const baseCanvas = document.getElementById('baseCanvas');
 const drawCanvas = document.getElementById('drawCanvas');
 const drawModeButton = document.getElementById('drawModeBtn');
+const backgroundButton = document.getElementById('backgroundBtn');
 
 const queryString = window.location.search
 const urlParams = new URLSearchParams(queryString)
@@ -423,6 +424,7 @@ async function updateConnectButton()
     else if (img.image.src === "")
     {
         drawModeButton.style.visibility = "hidden"
+        backgroundButton.style.visibility = "hidden"
         connectButton.innerHTML = "Drop or import image"
         connectButton.disabled = true
     }
@@ -433,9 +435,11 @@ async function updateConnectButton()
             befImport.children[i].disabled = false
         }
         drawModeButton.style.visibility = "visible"
+        backgroundButton.style.visibility = "visible"
         connectButton.className = 'mmBtn'
         connectButton.innerHTML = 'draw!'
         connectButton.disabled = false
+        backgroundButton.disabled = false
     }
     else
     {
@@ -443,6 +447,8 @@ async function updateConnectButton()
         for (let i = 0; i < befImport.children.length; i++) {
             befImport.children[i].disabled = true
         }
+        // lock in decision
+        backgroundButton.disabled = true
         connectButton.innerHTML = ''
         connectButton.className = 'mmBtnDrawing'
     }
@@ -558,7 +564,7 @@ async function getCurrentColor(x, y)
 {
     const imageData = baseCtx.getImageData(x, y, 1, 1).data
     if (imageData[3] === 0) // transparent background => white
-        return "FFFFFF"
+        return "not set"
 
     return (imageData[0].toString(16).padStart(2, '0') +
         imageData[1].toString(16).padStart(2, '0') +
@@ -601,6 +607,7 @@ function approximateColor(r, g, b)
 }
 
 let drawMode = "random"
+let background = false
 let drawing = false
 async function draw()
 {
@@ -613,35 +620,52 @@ async function draw()
     {
         if (!drawing)   // shouldn't be set from outside...
             break
-        if (idx_array.length === 0)
-        {
-            await delay(1000)
-            continue
-        }
         let percent = 100 * (total - idx_array.length) / total
         progressBar[1].style.width = percent + '%'
         progressBar[0].innerHTML = percent.toFixed(2) + "% drawn (" + (total - idx_array.length) + "/" + total + " Pixel)"
+        if (idx_array.length === 0)
+        {
+            if (background)
+                break
+            await delay(1000)
+            continue
+        }
+
         let idx
         if (drawMode === "random")
             idx = getRandomInt(idx_array.length)
         else if (drawMode === "rows")
             idx = 0
         let i = idx_array[idx] * 4
-        const red = imgData[i];
-        const green = imgData[i + 1];
-        const blue = imgData[i + 2];
-        const alpha = imgData[i + 3];
-        if (alpha <= 16)    // almost transparent, we can probably hide it
+
+        // get current color
+        const x = img.x + (i / 4 % img.w)
+        const y = img.y + Math.trunc(((i / 4) / img.w))
+        let cur_col = await getCurrentColor(x, y)
+        if (background && cur_col !== "not set")
         {
             idx_array.splice(idx, 1)
             continue
         }
+        if (cur_col === "not set")
+        {
+            cur_col = "FFFFFF"
+        }
 
+        // get new color
+        const red = imgData[i];
+        const green = imgData[i + 1];
+        const blue = imgData[i + 2];
+        const alpha = imgData[i + 3];
+        if (alpha <= 16)
+        {// almost transparent, we can probably hide it
+            idx_array.splice(idx, 1)
+            continue
+        }
         let min_idx = approximateColor(red, green, blue)
-        const x = img.x + (i / 4 % img.w)
-        const y = img.y + Math.trunc(((i / 4) / img.w))
-        const col = await getCurrentColor(x, y);
-        if (col !== palette[min_idx])
+
+        // check if we need to update
+        if (cur_col !== palette[min_idx])
             await paintPixel(x, y, min_idx)
         else
             idx_array.splice(idx,1)
@@ -771,7 +795,7 @@ drawCanvas.addEventListener("drop", function (evt) {
     var files = evt.dataTransfer.files;
     if (files.length > 0) {
         var file = files[0];
-        if (typeof FileReader !== "undefined" && file.type.indexOf("image") != -1) {
+        if (typeof FileReader !== "undefined" && file.type.indexOf("image") !== -1) {
             var reader = new FileReader();
 // Note: addEventListener doesn't work in Google Chrome for this event
             reader.onload = function (evt2) {
@@ -807,4 +831,15 @@ drawModeButton.addEventListener("click", async function(event)
     else if (drawMode === "rows")
         drawMode = "random"
     drawModeButton.innerText = drawMode
+})
+
+backgroundButton.addEventListener("click", async function(event)
+{
+    let backgroundStr
+    background = !background
+    if (background)
+        backgroundStr = "Background only"
+    else
+        backgroundStr = "Normal"
+    backgroundButton.innerText = backgroundStr
 })
