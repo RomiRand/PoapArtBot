@@ -11,6 +11,7 @@ const queryString = window.location.search
 const urlParams = new URLSearchParams(queryString)
 const canvasId = urlParams.get('canvasId')
 
+let title
 let bearer = ""
 let baseUrl = "https://api-sandbox.poap.art/canvas/"
 let idx_array
@@ -133,10 +134,11 @@ function setupCanvas()
             return response.json();
         })
         .then(data => {
-            baseCanvas.width = data["rows"] * data["chunkSize"]
-            baseCanvas.height = data["cols"] * data["chunkSize"]
-            drawCanvas.width = data["rows"] * data["chunkSize"]
-            drawCanvas.height = data["cols"] * data["chunkSize"]
+            baseCanvas.width = data["cols"] * data["chunkSize"]
+            baseCanvas.height = data["rows"] * data["chunkSize"]
+            drawCanvas.width = data["cols"] * data["chunkSize"]
+            drawCanvas.height = data["rows"] * data["chunkSize"]
+            title = data["title"]
             for (let r = 0; r < data["rows"]; ++r)
             {
                 for(let c = 0; c < data["cols"]; ++c)
@@ -514,7 +516,7 @@ async function singIn()
         },
         primaryType: "Paint",
         message:{
-            art_title: "Week 21 - 2021",
+            art_title: title,
             art_id: canvasId,
             artist_address: addr
         }
