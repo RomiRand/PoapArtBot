@@ -36,8 +36,11 @@ For now you'll need to use a terminal, I'll try to explain everything in detail.
 4. Once you're happy, hit `draw!`
 5. You can draw together with your friends (__Your image needs to be from the internet__). Click `Export`
    at the bottom to copy your image configuration to your clipboard. Anyone you send it to can help you now.
-   You can also use this config yourself (e.g. to continue drawing after a pause).
-   If you are drawing with others, it's advised to draw random pixels.
+   You can also use this config for yourself (e.g. to continue drawing after a pause). \
+   __NOTE__:
+   - If you are drawing with others, it's advised to draw random pixels.
+   - Some images don't work (due to a security feature of browsers).
+     If you have issues importing, you can try to upload it to another site ([imgur](https://imgur.com/) seems to work).
 6. Monitor the drawing status via the progress bar at the bottom. You can also keep it running after you reached
    100% to protect it from pixel attackers!
 7. Below the canvas you can find a detailed list of all "friendly and hostile" artists
