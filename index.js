@@ -10,12 +10,15 @@ const backgroundButton = document.getElementById('backgroundBtn');
 const queryString = window.location.search
 const urlParams = new URLSearchParams(queryString)
 const canvasId = urlParams.get('canvasId')
+const mode = urlParams.get('mode')
 
 let title
 let bearer = ""
-let baseUrl = "https://api-sandbox.poap.art/canvas/"
+let main = mode === "sandbox" ? "api-sandbox.poap.art/canvas/" : "api.poap.art/canvas/"
+let baseUrl = "https://" + main
 let idx_array
 let addr
+let salt = mode === "sandbox" ? "0xdea10b41b9cf1f4c6cf33150f19fb69dcef673e6c92a8fe734bb2bc11150cc45" : "0x595b7b8916cd0fcd630b30093b7a0fb5ddfaca27d21c6f2ab0fe95c394fb192f"
 
 exportButton.disabled = true;
 
@@ -24,7 +27,7 @@ function secondsSinceEpoch()
     return Math.round(Date.now()) - 15 * 60 * 1000
 }
 
-let webSocket = new WebSocket("wss://api-sandbox.poap.art/canvas/" + canvasId);//?since=" + secondsSinceEpoch.toString(16));
+let webSocket = new WebSocket("wss:" + main + canvasId);
 webSocket.addEventListener("message", onMessage);
 webSocket.addEventListener("open", onOpen);
 function onOpen (event) {
@@ -523,14 +526,16 @@ async function singIn()
     });
 
 
-    let params = [addr, msgParams];
-    let method = 'eth_signTypedData_v4';
+    // let params = [addr, msgParams];
+    let params = ["Hi there from POAP.art!\nSign this message to log in and become an artist", addr];
+    // let method = 'eth_signTypedData_v4';
+    let method = 'personal_sign';
     await window.ethereum.request(
         {
             method: method,
             params: params,
-            from: addr,
-            id: 1
+            //from: addr,
+            //id: 1
         }
     ).then(async function (result, err) {
         if (err)
@@ -541,10 +546,11 @@ async function singIn()
         if (result.error)
             return console.error('ERROR', result);
 
-        let url = baseUrl + canvasId + "/signin"
+        //let url = baseUrl + canvasId + "/signin"
+        let url = "https://api-sandbox.poap.art/signin"
         const data= {
-            wallet: addr,
-            chainId: 1,
+            //wallet: addr,
+            //chainId: 1,
             signature: result
         }
         const params = {
