@@ -526,14 +526,16 @@ async function singIn()
     });
 
 
-    let params = [addr, msgParams];
-    let method = 'eth_signTypedData_v4';
+    // let params = [addr, msgParams];
+    let params = ["Hi there from POAP.art!\nSign this message to log in and become an artist", addr];
+    // let method = 'eth_signTypedData_v4';
+    let method = 'personal_sign';
     await window.ethereum.request(
         {
             method: method,
             params: params,
-            from: addr,
-            id: 1
+            //from: addr,
+            //id: 1
         }
     ).then(async function (result, err) {
         if (err)
@@ -544,10 +546,11 @@ async function singIn()
         if (result.error)
             return console.error('ERROR', result);
 
-        let url = baseUrl + canvasId + "/signin"
+        //let url = baseUrl + canvasId + "/signin"
+        let url = "https://api-sandbox.poap.art/signin"
         const data= {
-            wallet: addr,
-            chainId: 1,
+            //wallet: addr,
+            //chainId: 1,
             signature: result
         }
         const params = {
