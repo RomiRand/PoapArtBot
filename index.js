@@ -14,11 +14,11 @@ const mode = urlParams.get('mode')
 
 let title
 let bearer = ""
-let main = mode === "sandbox" ? "api-sandbox.poap.art/canvas/" : "api.poap.art/canvas/"
+let api = mode === "sandbox" ? "api-sandbox.poap.art/" : "api.poap.art/"
+let main = api + "canvas/"
 let baseUrl = "https://" + main
 let idx_array
 let addr
-let salt = mode === "sandbox" ? "0xdea10b41b9cf1f4c6cf33150f19fb69dcef673e6c92a8fe734bb2bc11150cc45" : "0x595b7b8916cd0fcd630b30093b7a0fb5ddfaca27d21c6f2ab0fe95c394fb192f"
 
 exportButton.disabled = true;
 
@@ -497,35 +497,6 @@ async function singIn()
     const accounts = await ethereum.request({ method: 'eth_accounts' });
     addr = EthJS.Util.toChecksumAddress(accounts[0])
 
-    const msgParams = JSON.stringify({
-        types: {
-            EIP712Domain: [
-                {name:"name",type:"string"},
-                {name:"version",type:"string"},
-                {name:"chainId",type:"uint256"},
-                {name:"salt",type:"bytes32"}
-            ],
-            Paint: [
-                {name:"art_title",type:"string"},
-                {name:"art_id",type:"string"},
-                {name:"artist_address",type:"address"}
-            ]
-        },
-        domain: {
-            name:"POAP.art",
-            version:"1",
-            chainId:1,
-            salt: '0xdea10b41b9cf1f4c6cf33150f19fb69dcef673e6c92a8fe734bb2bc11150cc45'
-        },
-        primaryType: "Paint",
-        message:{
-            art_title: title,
-            art_id: canvasId,
-            artist_address: addr
-        }
-    });
-
-
     // let params = [addr, msgParams];
     let params = ["Hi there from POAP.art!\nSign this message to log in and become an artist", addr];
     // let method = 'eth_signTypedData_v4';
@@ -547,7 +518,7 @@ async function singIn()
             return console.error('ERROR', result);
 
         //let url = baseUrl + canvasId + "/signin"
-        let url = "https://api-sandbox.poap.art/signin"
+        let url = "https://" + api + "signin"
         const data= {
             //wallet: addr,
             //chainId: 1,
