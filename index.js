@@ -27,12 +27,30 @@ function secondsSinceEpoch()
     return Math.round(Date.now()) - 15 * 60 * 1000
 }
 
-let webSocket = new WebSocket("wss:" + main + canvasId);
-webSocket.addEventListener("message", onMessage);
-webSocket.addEventListener("open", onOpen);
-function onOpen (event) {
-    // let msg = JSON.parse(event);
-    console.log(event);
+let webSocket = null;
+setupWebsocket();
+
+/**
+ * Setup autorestarting websocket: will automatically recreate itself on failure,
+ * after waiting 60 seconds.
+ *
+ * Websocket is used to record new pixel updates.
+ */
+function setupWebsocket() {
+  const localWebSocket = new WebSocket("wss:" + main + canvasId);
+  if (webSocket) { // close old websocket
+    webSocket.close();
+  }
+  webSocket = localWebSocket;
+  webSocket.addEventListener("message", onMessage);
+  webSocket.addEventListener("open", function onOpen(_event) {
+    console.log(`WebSocket connection open!`);
+  });
+  webSocket.addEventListener("close", function onClose(event) {
+    console.error(`Websocket closed with ${event}`);
+    console.info("Recreating websocket connection in 60s");
+    setTimeout(setupWebsocket, 60 * 1000);
+  });
 }
 
 async function setTable(id)
