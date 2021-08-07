@@ -182,7 +182,10 @@ async function getChunk(row, col)
 {
     if (canvasId === "")
         return;
-    let url = baseUrl + canvasId + "/chunk/" + row + ":" + col + "?since=" + secondsSinceEpoch().toString(16);
+    const url = new URL(`${baseUrl}${canvasId}/chunk/${row}:${col}`);
+    // commenting out since official website no longer uses this
+    // and keeping it may invalid caching
+    // url.searchParams.set("since", secondsSinceEpoch().toString(16));
     const response = await fetch(url);
     return await response.arrayBuffer();
 }
