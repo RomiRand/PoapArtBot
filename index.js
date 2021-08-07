@@ -183,27 +183,51 @@ function drawPixel(x, y, colorIdx)
     baseCtx.putImageData(imageData, x, y);
 }
 
-
+/**
+ * Paints a pixel on the POAP canvas.
+ *
+ * Resolves when ready to paint the next pixel.
+ * Should the painting HTTP call take too long, this will abort the paint call,
+ * and throw an `AbortError`.
+ *
+ * @param {number} x - X co-ordinate
+ * @param {number} y - Y co-ordinate.
+ * @param {keyof palette} color - Index number of the color to paint.
+ * Use {@link approximateColor} to find the color index.
+ * @throws {AbortError} Rejects with `AbortError` if the HTTP call timed-out.
+ * Default timeout is 5 seconds (same as official POAP.art client).
+ * @returns {Promise<void>} Resolves after `waitSeconds`, when ready to paint
+ * the next pixel.
+ */
 async function paintPixel(x, y, color)
 {
     if (bearer === "")
         return;
-    let url = baseUrl + canvasId + "/paint"
-    const data = {x: x, y: y, color: color}
+    const url = new URL(`${baseUrl}${canvasId}/paint`);
+    const data = {x: x, y: y, color: color};
+
+    // We use AbortController to automatically cancel the HTTP call
+    const controller = new AbortController();
+    const signal = controller.signal;
+    // abort will be ignored if the HTTP call succeeded earlier
+    // poap.art website also aborts /paint calls after 5 seconds
+    setTimeout(() => controller.abort(), 5000);
+
     const params = {
         method: "POST",
         body: JSON.stringify(data),
         headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + bearer
-        }
-    }
-    await fetch(url, params)
-        .then(data=>{return data.json()})
-        .then(async function(data) {
-            console.log("drawn pixel!");
-            await delay(1100);
-        });
+        },
+        signal, // fetch will timeout after xxx seconds
+    };
+
+    const paintResponse = await fetch(url, params);
+    const paintData = await paintResponse.json();
+    // follow wait seconds (some canvases are faster the more POAPs you have)
+    const waitSeconds = paintData?.waitSeconds ?? 1;
+    await delay(1000 * waitSeconds + 200); // add 200ms extra delay
 }
 
 async function drawChunk(row, col, size)
@@ -645,7 +669,11 @@ async function draw()
 
         // check if we need to update
         if (cur_col !== palette[min_idx])
+          try{
             await paintPixel(x, y, min_idx)
+          } catch (error) {
+            console.error(`Error in paintPixel: ${error}`);
+          }
         else
             idx_array.splice(idx,1)
     }
