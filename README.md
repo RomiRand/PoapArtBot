@@ -45,7 +45,9 @@ For now you'll need to use a terminal, I'll try to explain everything in detail.
    100% to protect it from pixel attackers!
 7. Below the canvas you can find a detailed list of all "friendly and hostile" artists
    (collected locally after you start drawing).
-8. Don't forget to stop your HTTP-Server when you're done: Hit `Ctrl + c` in the terminal window
+8. You might also be interested in [PoapArtParticipants](https://github.com/RomiRand/PoapArtParticipants), another weird
+   tool with weird UI. It helps you to collect all the drawers of a custom area.
+9. Don't forget to stop your HTTP-Server when you're done: Hit `Ctrl + c` in the terminal window
 
 ![Bot drawing statistics](doc/stats.png "Bot drawing statistics")
 
