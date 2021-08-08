@@ -18,7 +18,8 @@ let api = mode === "sandbox" ? "api-sandbox.poap.art/" : "api.poap.art/"
 let main = api + "canvas/"
 let baseUrl = "https://" + main
 let idx_array
-let addr
+/** @type {string | null} My Ethereum address from MetaMask */
+let myAddress = null;
 
 exportButton.disabled = true;
 
@@ -85,60 +86,87 @@ let enemyArtistsList = new Map()
 setTable('friendlyTableBody')
 setTable('enemyTableBody')
 
-async function onMessage (event) {
-    let msg = JSON.parse(event.data);
-    if (msg[0] === "pixel")
-    {
-        drawPixel(msg[1], msg[2], msg[3]);
-        if (img.x <= msg[1] && msg[1] < img.x + img.w &&
-            img.y <= msg[2] && msg[2] < img.y + img.h)
-        {
-            const col = drawCtx.getImageData(msg[1], msg[2], 1, 1).data;
-            let color_idx = approximateColor(col[0], col[1], col[2])
-            let i = (msg[2] - img.y) * img.w + msg[1] - img.x
-            let wallet
-            if (msg[6])
-                wallet = msg[6]
-            else
-                wallet = msg[5]
-            // filter ourselves ?
-            if (msg[3] !== color_idx)
-            {
-                idx_array.push(i)
-                let new_count = 0
-                let old_count = enemyArtistsList.get(wallet)
-                if (old_count)
-                {
-                    new_count = old_count[1] + 1
-                }
-                enemyArtistsList.set(wallet, [secondsSinceEpoch(), new_count])
-            }
-            else
-            {
-                idx_array.splice(idx_array.indexOf(i), 1)
-                if (msg[5].toUpperCase() !== addr.toUpperCase())
-                {
-                    // filter ourselves ?
-                }
-                let new_count = 0
-                let old_count = friendlyArtistsList.get(wallet)
-                if (old_count)
-                {
-                    new_count = old_count[1] + 1
-                }
-                friendlyArtistsList.set(wallet, [secondsSinceEpoch(), new_count])
-            }
-        }
+/**
+ * Records the placement of a pixel in friendly/enemy artist table.
+ *
+ * @param {number} x - X co-ordinate
+ * @param {number} y - Y co-ordinate.
+ * @param {keyof palette} recvColorIdx - Index number of the color that was painted.
+ * @param {string} _hexTime - Time of pixel placement as a hex string.
+ * Currently unused.
+ * @param {string} address - Wallet address of the person who painted this pixel.
+ * @param {string | null} ens - Wallet ENS, if set.
+ */
+function recordPixelPlacement(x, y, recvColorIdx, _hexTime, address, ens) {
+    const withinImageRange = (
+      img.x <= x && x < img.x + img.w &&
+      img.y <= y && y < img.y + img.h
+    );
+    if (!withinImageRange) {
+      return;
     }
-    else if (msg[0] === "pixels")
+
+    const col = drawCtx.getImageData(x, y, 1, 1).data;
+    let expectedColorIdx = approximateColor(col[0], col[1], col[2])
+    let i = (y - img.y) * img.w + x - img.x
+    const wallet = ens ?? address; // use ENS if it exists
+
+    if (recvColorIdx !== expectedColorIdx)
     {
-        for (let i in msg[1])
+        idx_array.push(i) // record that we need to overwrite enemy pixel
+        let new_count = 0
+        let old_count = enemyArtistsList.get(wallet)
+        if (old_count)
         {
-            drawPixel(msg[1][i][0], msg[1][i][1], msg[1][i][2]);
+            new_count = old_count[1] + 1
         }
+        enemyArtistsList.set(wallet, [secondsSinceEpoch(), new_count])
     }
     else
-        console.log(msg[0]);
+    {
+        idx_array.splice(idx_array.indexOf(i), 1)
+        if (address.toUpperCase() === myAddress.toUpperCase())
+        {
+            // filter ourselves
+            return;
+        }
+        let new_count = 0
+        let old_count = friendlyArtistsList.get(wallet)
+        if (old_count)
+        {
+            new_count = old_count[1] + 1
+        }
+        friendlyArtistsList.set(wallet, [secondsSinceEpoch(), new_count])
+    }
+}
+
+/**
+ * Handles WebSocket `"message"` events from poap.art
+ * @param {MessageEvent} event - Message event.
+ */
+function onMessage(event) {
+    let msg = JSON.parse(event.data);
+    const eventType = msg[0];
+    switch (eventType) {
+        case "pixel": {
+            const [_type, x, y, colorIdx, _hexTime, address, ens] = msg;
+            drawPixel(x, y, colorIdx);
+            recordPixelPlacement(x, y, colorIdx, _hexTime, address, ens);
+            break;
+        }
+        case "pixels": {
+          for (const [x, y, colorIdx] of msg[1]) {
+            drawPixel(x, y, colorIdx);
+          }
+          break;
+        }
+        case "online": {
+          break; // ignore
+        }
+        default: {
+          console.log(`Unknown WebSocket message of type: ${eventType}`);
+        }
+    }
 }
 
 function setupCanvas()
@@ -540,17 +568,17 @@ connectButton.addEventListener('click', async () => {
 async function singIn()
 {
     const accounts = await ethereum.request({ method: 'eth_accounts' });
-    addr = EthJS.Util.toChecksumAddress(accounts[0])
+    myAddress = EthJS.Util.toChecksumAddress(accounts[0])
 
     // let params = [addr, msgParams];
-    let params = ["Hi there from POAP.art!\nSign this message to log in and become an artist", addr];
+    let params = ["Hi there from POAP.art!\nSign this message to log in and become an artist", myAddress];
     // let method = 'eth_signTypedData_v4';
     let method = 'personal_sign';
     await window.ethereum.request(
         {
             method: method,
             params: params,
-            //from: addr,
+            //from: myAddress,
             //id: 1
         }
     ).then(async function (result, err) {
@@ -565,7 +593,7 @@ async function singIn()
         //let url = baseUrl + canvasId + "/signin"
         let url = "https://" + api + "signin"
         const data= {
-            //wallet: addr,
+            //wallet: myAddress,
             //chainId: 1,
             signature: result
         }
