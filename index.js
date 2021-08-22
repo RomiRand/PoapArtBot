@@ -304,7 +304,8 @@ async function paintPixel(x, y, color)
         body: JSON.stringify(data),
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + bearer
+            'Authorization': 'Bearer ' + bearer,
+            'X-POAP-Art-Bot': 'RamiRond Bot', // in case POAP.art team needs to block us
         },
         signal, // fetch will timeout after xxx seconds
     };
