@@ -18,7 +18,8 @@ let api = mode === "sandbox" ? "api-sandbox.poap.art/" : "api.poap.art/"
 let main = api + "canvas/"
 let baseUrl = "https://" + main
 let idx_array
-let addr
+/** @type {string | null} My Ethereum address from MetaMask */
+let myAddress = null;
 
 exportButton.disabled = true;
 
@@ -27,12 +28,30 @@ function secondsSinceEpoch()
     return Math.round(Date.now()) - 15 * 60 * 1000
 }
 
-let webSocket = new WebSocket("wss:" + main + canvasId);
-webSocket.addEventListener("message", onMessage);
-webSocket.addEventListener("open", onOpen);
-function onOpen (event) {
-    // let msg = JSON.parse(event);
-    console.log(event);
+let webSocket = null;
+setupWebsocket();
+
+/**
+ * Setup autorestarting websocket: will automatically recreate itself on failure,
+ * after waiting 60 seconds.
+ *
+ * Websocket is used to record new pixel updates.
+ */
+function setupWebsocket() {
+  const localWebSocket = new WebSocket("wss:" + main + canvasId);
+  if (webSocket) { // close old websocket
+    webSocket.close();
+  }
+  webSocket = localWebSocket;
+  webSocket.addEventListener("message", onMessage);
+  webSocket.addEventListener("open", function onOpen(_event) {
+    console.log(`WebSocket connection open!`);
+  });
+  webSocket.addEventListener("close", function onClose(event) {
+    console.error(`Websocket closed with ${event}`);
+    console.info("Recreating websocket connection in 60s");
+    setTimeout(setupWebsocket, 60 * 1000);
+  });
 }
 
 async function setTable(id)
@@ -67,60 +86,87 @@ let enemyArtistsList = new Map()
 setTable('friendlyTableBody')
 setTable('enemyTableBody')
 
-async function onMessage (event) {
-    let msg = JSON.parse(event.data);
-    if (msg[0] === "pixel")
-    {
-        drawPixel(msg[1], msg[2], msg[3]);
-        if (img.x <= msg[1] && msg[1] < img.x + img.w &&
-            img.y <= msg[2] && msg[2] < img.y + img.h)
-        {
-            const col = drawCtx.getImageData(msg[1], msg[2], 1, 1).data;
-            let color_idx = approximateColor(col[0], col[1], col[2])
-            let i = (msg[2] - img.y) * img.w + msg[1] - img.x
-            let wallet
-            if (msg[6])
-                wallet = msg[6]
-            else
-                wallet = msg[5]
-            // filter ourselves ?
-            if (msg[3] !== color_idx)
-            {
-                idx_array.push(i)
-                let new_count = 0
-                let old_count = enemyArtistsList.get(wallet)
-                if (old_count)
-                {
-                    new_count = old_count[1] + 1
-                }
-                enemyArtistsList.set(wallet, [secondsSinceEpoch(), new_count])
-            }
-            else
-            {
-                idx_array.splice(idx_array.indexOf(i), 1)
-                if (msg[5].toUpperCase() !== addr.toUpperCase())
-                {
-                    // filter ourselves ?
-                }
-                let new_count = 0
-                let old_count = friendlyArtistsList.get(wallet)
-                if (old_count)
-                {
-                    new_count = old_count[1] + 1
-                }
-                friendlyArtistsList.set(wallet, [secondsSinceEpoch(), new_count])
-            }
-        }
+/**
+ * Records the placement of a pixel in friendly/enemy artist table.
+ *
+ * @param {number} x - X co-ordinate
+ * @param {number} y - Y co-ordinate.
+ * @param {keyof palette} recvColorIdx - Index number of the color that was painted.
+ * @param {string} _hexTime - Time of pixel placement as a hex string.
+ * Currently unused.
+ * @param {string} address - Wallet address of the person who painted this pixel.
+ * @param {string | null} ens - Wallet ENS, if set.
+ */
+function recordPixelPlacement(x, y, recvColorIdx, _hexTime, address, ens) {
+    const withinImageRange = (
+      img.x <= x && x < img.x + img.w &&
+      img.y <= y && y < img.y + img.h
+    );
+    if (!withinImageRange) {
+      return;
     }
-    else if (msg[0] === "pixels")
+
+    const col = drawCtx.getImageData(x, y, 1, 1).data;
+    let expectedColorIdx = approximateColor(col[0], col[1], col[2])
+    let i = (y - img.y) * img.w + x - img.x
+    const wallet = ens ?? address; // use ENS if it exists
+
+    if (recvColorIdx !== expectedColorIdx)
     {
-        for (let i in msg[1])
+        idx_array.push(i) // record that we need to overwrite enemy pixel
+        let new_count = 0
+        let old_count = enemyArtistsList.get(wallet)
+        if (old_count)
         {
-            drawPixel(msg[1][i][0], msg[1][i][1], msg[1][i][2]);
+            new_count = old_count[1] + 1
         }
+        enemyArtistsList.set(wallet, [secondsSinceEpoch(), new_count])
     }
     else
-        console.log(msg[0]);
+    {
+        idx_array.splice(idx_array.indexOf(i), 1)
+        if (address.toUpperCase() === myAddress.toUpperCase())
+        {
+            // filter ourselves
+            return;
+        }
+        let new_count = 0
+        let old_count = friendlyArtistsList.get(wallet)
+        if (old_count)
+        {
+            new_count = old_count[1] + 1
+        }
+        friendlyArtistsList.set(wallet, [secondsSinceEpoch(), new_count])
+    }
+}
+
+/**
+ * Handles WebSocket `"message"` events from poap.art
+ * @param {MessageEvent} event - Message event.
+ */
+function onMessage(event) {
+    let msg = JSON.parse(event.data);
+    const eventType = msg[0];
+    switch (eventType) {
+        case "pixel": {
+            const [_type, x, y, colorIdx, _hexTime, address, ens] = msg;
+            drawPixel(x, y, colorIdx);
+            recordPixelPlacement(x, y, colorIdx, _hexTime, address, ens);
+            break;
+        }
+        case "pixels": {
+          for (const [x, y, colorIdx] of msg[1]) {
+            drawPixel(x, y, colorIdx);
+          }
+          break;
+        }
+        case "online": {
+          break; // ignore
+        }
+        default: {
+          console.log(`Unknown WebSocket message of type: ${eventType}`);
+        }
+    }
 }
 
 function setupCanvas()
@@ -160,13 +206,53 @@ setupCanvas();
 let baseCtx = baseCanvas.getContext("2d");
 let drawCtx = drawCanvas.getContext("2d");
 
+/**
+ * Gets the data for a specific chunk.
+ *
+ * Automatically retries up to 5 times in case of failure before throwing an error,
+ * e.g. if the POAP.art servers are being slow, causing a Cloudflare CDN error.
+ *
+ * @param {number} row - Chunk row number.
+ * @param {number} col - Chunk column number.
+ * @returns {Promise<ArrayBuffer>} The chunk data, where each byte is a UInt8
+ * representing the colorId in the palette array. (e.g. 1 will be #F3F3F4).
+ */
 async function getChunk(row, col)
 {
     if (canvasId === "")
         return;
-    let url = baseUrl + canvasId + "/chunk/" + row + ":" + col + "?since=" + secondsSinceEpoch().toString(16);
-    const response = await fetch(url);
-    return await response.arrayBuffer();
+    const url = new URL(`${baseUrl}${canvasId}/chunk/${row}:${col}`);
+    // commenting out since official website no longer uses this
+    // and keeping it may invalid caching
+    // url.searchParams.set("since", secondsSinceEpoch().toString(16));
+    const maxTries = 5; // try 5 times before failing
+    let tries = 0;
+    while (true) {
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          return await response.arrayBuffer();
+        } else {
+          throw new Error(
+            `Fetching ${url} failed with code ${response.status}, `
+            + `and text ${await response.text()}`
+          );
+        }
+      } catch (error) {
+        tries++;
+        if (tries < maxTries) {
+          console.warn(
+            `Failed ${tries} times at loading chunk ${url} with error ${error}.\n`
+            + `Retrying after a delay of ${tries} seconds.`
+          );
+          await delay(1000 * tries);
+        } else {
+          throw new Error(
+            `Failed ${tries} times at loading chunk ${url}. Latest error was ${error}.`
+          );
+        }
+      }
+    }
 }
 
 let palette = ["FFFFFF","F3F3F4","E7E7EA","DBDBDF","CFCFD4","C3C3C9","B7B7BF","ABABB4","9F9FA9","93939E","878794","7B7B89","6F6F7E","636373","575769","4B4B5E","F9F9F9","E8E8E8","D8D8D8","C7C7C7","B7B7B7","A6A6A6","959595","858585","747474","646464","535353","424242","323232","212121","111111","000000","FFF0DC","FEEAD5","FDE5CE","FCDFC7","FADABF","F9D4B8","F8CFB1","F7C9AA","F1BB9E","EAAE93","E4A088","DE937C","D78571","D17765","CA6A5A","C45C4E","EADCDA","DEC9C5","D1B6B1","C5A39C","B88F88","AC7C73","9F695F","93564A","885045","7C4940","71433B","663D36","5A3630","4F302B","432926","382321","FFD4D4","FDB6B6","FC9797","FA7979","F95B5B","F73D3D","F61E1E","F40000","E00000","CB0000","B70000","A30101","8E0101","7A0101","650101","510101","FFE1CC","FFD0AF","FFBE92","FFAD75","FF9B57","FF8A3A","FF781D","FF6700","EF6202","DF5D04","CF5805","BF5307","AF4E09","9F490B","8F440C","7F3F0E","FFF8E1","FFF3C7","FFEEAD","FFE993","FFE57A","FFE060","FFDB46","FFD62C","EEC72A","DEB928","CDAA26","BD9C24","AC8D21","9B7E1F","8B701D","7A611B","FFFACF","FFF9BE","FFF9AE","FFF89D","FEF78C","FEF67B","FEF66B","FFF200","EDE002","DCCE04","CABC06","B9AA08","A79709","95850B","84730D","72610F","F1FFCF","E7FFB1","DCFF94","D2FF76","C7FF59","BDFF3B","B2FF1E","A8FF00","9BEA01","8ED401","81BF02","74AA02","669403","597F03","4C6904","3F5404","C5FFC5","AEFAAE","96F596","7FF07F","68EC68","51E751","39E239","22DD22","20CB20","1DBA1D","1BA81B","189618","168416","147314","116111","0F4F0F","CAFFF6","ADFFF2","90FFEE","73FFEA","57FFE6","3AFFE2","1DFFDE","00FFDA","01E7C5","01CFB1","02B79C","039F88","038773","046F5E","04574A","053F35","E1FEFF","CBF9FF","B5F5FF","9FF0FF","8AEBFF","74E6FF","5EE2FF","48DDFF","40CCEB","38BCD7","2FABC3","279BB0","1F8A9C","167988","0E6974","065860","D4DEFF","B6C2FF","97A6FF","798AFF","5B6DFF","3D51FF","1E35FF","0019FF","0016EB","0113D7","0110C3","010EB0","010B9C","020888","020574","020260","F0E3FF","E3C3FF","D6A2FF","C982FF","BC61FF","AF41FF","A220FF","9500FF","8700E9","7900D3","6B00BD","5E00A7","500091","42007B","340065","26004F","FFE3FC","FFD0F8","FFBDF4","FFAAF0","FF98ED","FF85E9","FF72E5","FF5FE1","F056D3","E04DC6","D144B8","C23BAB","B2329D","A3298F","932082","841774","F9E1ED","FAC8DE","FBAFCF","FC96C0","FC7CB2","FD63A3","FE4A94","FF3185","EB2D7B","D72A71","C32667","B0225E","9C1E54","881A4A","741740","601336"]
@@ -183,27 +269,52 @@ function drawPixel(x, y, colorIdx)
     baseCtx.putImageData(imageData, x, y);
 }
 
-
+/**
+ * Paints a pixel on the POAP canvas.
+ *
+ * Resolves when ready to paint the next pixel.
+ * Should the painting HTTP call take too long, this will abort the paint call,
+ * and throw an `AbortError`.
+ *
+ * @param {number} x - X co-ordinate
+ * @param {number} y - Y co-ordinate.
+ * @param {keyof palette} color - Index number of the color to paint.
+ * Use {@link approximateColor} to find the color index.
+ * @throws {AbortError} Rejects with `AbortError` if the HTTP call timed-out.
+ * Default timeout is 5 seconds (same as official POAP.art client).
+ * @returns {Promise<void>} Resolves after `waitSeconds`, when ready to paint
+ * the next pixel.
+ */
 async function paintPixel(x, y, color)
 {
     if (bearer === "")
         return;
-    let url = baseUrl + canvasId + "/paint"
-    const data = {x: x, y: y, color: color}
+    const url = new URL(`${baseUrl}${canvasId}/paint`);
+    const data = {x: x, y: y, color: color};
+
+    // We use AbortController to automatically cancel the HTTP call
+    const controller = new AbortController();
+    const signal = controller.signal;
+    // abort will be ignored if the HTTP call succeeded earlier
+    // poap.art website also aborts /paint calls after 5 seconds
+    setTimeout(() => controller.abort(), 5000);
+
     const params = {
         method: "POST",
         body: JSON.stringify(data),
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + bearer
-        }
-    }
-    await fetch(url, params)
-        .then(data=>{return data.json()})
-        .then(async function(data) {
-            console.log("drawn pixel!");
-            await delay(1100);
-        });
+            'Authorization': 'Bearer ' + bearer,
+            'X-POAP-Art-Bot': 'RamiRond Bot', // in case POAP.art team needs to block us
+        },
+        signal, // fetch will timeout after xxx seconds
+    };
+
+    const paintResponse = await fetch(url, params);
+    const paintData = await paintResponse.json();
+    // follow wait seconds (some canvases are faster the more POAPs you have)
+    const waitSeconds = paintData?.waitSeconds ?? 1;
+    await delay(1000 * waitSeconds + 200); // add 200ms extra delay
 }
 
 async function drawChunk(row, col, size)
@@ -495,17 +606,17 @@ connectButton.addEventListener('click', async () => {
 async function singIn()
 {
     const accounts = await ethereum.request({ method: 'eth_accounts' });
-    addr = EthJS.Util.toChecksumAddress(accounts[0])
+    myAddress = EthJS.Util.toChecksumAddress(accounts[0])
 
     // let params = [addr, msgParams];
-    let params = ["Hi there from POAP.art!\nSign this message to log in and become an artist", addr];
+    let params = ["Hi there from POAP.art!\nSign this message to log in and become an artist", myAddress];
     // let method = 'eth_signTypedData_v4';
     let method = 'personal_sign';
     await window.ethereum.request(
         {
             method: method,
             params: params,
-            //from: addr,
+            //from: myAddress,
             //id: 1
         }
     ).then(async function (result, err) {
@@ -520,7 +631,7 @@ async function singIn()
         //let url = baseUrl + canvasId + "/signin"
         let url = "https://" + api + "signin"
         const data= {
-            //wallet: addr,
+            //wallet: myAddress,
             //chainId: 1,
             signature: result
         }
@@ -645,7 +756,11 @@ async function draw()
 
         // check if we need to update
         if (cur_col !== palette[min_idx])
+          try{
             await paintPixel(x, y, min_idx)
+          } catch (error) {
+            console.error(`Error in paintPixel: ${error}`);
+          }
         else
             idx_array.splice(idx,1)
     }
