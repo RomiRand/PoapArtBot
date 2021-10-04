@@ -683,8 +683,9 @@ function approximateColor(r, g, b)
         let col_r = parseInt(palette[j].slice(0, 2), 16);
         let col_g = parseInt(palette[j].slice(2, 4), 16);
         let col_b = parseInt(palette[j].slice(4, 6), 16);
-        // need a error function for color bit depth downscale approximation; probably quadratic sum is most accurate ?
-        let dist = Math.pow(Math.abs(r - col_r), 2)  + Math.pow(Math.abs(g - col_g),2) + Math.pow(Math.abs(b - col_b), 2);
+        // approximate using euclidean distance which is typically used for this task
+		// (see: https://en.wikipedia.org/wiki/Color_quantization#Algorithms)
+        let dist = Math.sqrt(Math.pow(r - col_r, 2) + Math.pow(g - col_g, 2) + Math.pow(b - col_b, 2));
         if (dist < min_dist)
         {
             min_dist = dist;
