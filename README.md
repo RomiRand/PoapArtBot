@@ -21,8 +21,8 @@ For now you'll need to use a terminal, I'll try to explain everything in detail.
 ### Install
 1. Download the repository (to your current directory): `git clone https://github.com/RomiRand/PoapArtBot.git`
 2. Change directory: `cd PoapArtBot`
-2. Start the local HTTP-Server via python: `./StartBot.sh`
-   - If python isn't detected even though you installed it, change `python` to `python3` (worked for me on windows)
+2. Start the local HTTP-Server using python: `./StartBot.sh` \
+   Windows users should run `StartWindows.bat`
 
 ## Usage
 0. Visit the page: [localhost:8080](localhost:8080)
