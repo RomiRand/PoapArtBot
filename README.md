@@ -1,7 +1,7 @@
 # PoapArtBot
 _Automated drawing interface for poap.art_
 
-This unofficial tool automates the drawing of images (later: text, ...) on the [poap.art website](poap.art).
+This unofficial tool automates the drawing of images (later: text, ...) on the [poap.art website](https://poap.art/).
 Simply drag-and-drop your image on the canvas and start drawing. It will approximate the colors to the limited set of 256,
 so the colors of your image might look a bit different than expected.
 
