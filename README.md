@@ -51,6 +51,9 @@ For now you'll need to use a terminal, I'll try to explain everything in detail.
 
 ![Bot drawing statistics](doc/stats.png "Bot drawing statistics")
 
+## Testing
+There is a [weekly sandbox canvas](https://sandbox.poap.art/) that can be used for testing.
+
 ## Contribute
 Unfortunately, [poap.art](poap.art) isn't open source (let's hope it will be soon!),
 so I basically needed to rebuilt all the relevant client-side parts of it.
