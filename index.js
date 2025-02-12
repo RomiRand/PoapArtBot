@@ -14,7 +14,7 @@ const mode = urlParams.get('mode')
 
 let title
 let bearer = ""
-let api = mode === "sandbox" ? "api-sandbox.poap.art/" : "api.poap.art/"
+let api = mode === "sandbox" ? "api.sandbox.poap.art/" : "api.poap.art/"
 let main = api + "canvas/"
 let baseUrl = "https://" + main
 let idx_array
