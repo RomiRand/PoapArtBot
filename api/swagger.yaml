@@ -1,0 +1,316 @@
+openapi: 3.0.0
+info:
+  title: POAP Art API
+  description: This is an unofficial documentation of the http://poap.art API. It was manually reverse engineered and may be incomplete. It may be useful when developing the bot.
+  version: 0.1.0
+
+servers:
+  - url: https://api.poap.art
+    description: Main instance
+  - url: https://api.sandbox.poap.art
+    description: Sandbox environment used for testing and development
+
+paths:
+  /canvas:
+    get:
+      summary: Returns the list of all canvases
+      # description: Optional extended description in CommonMark or HTML.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  counts:
+                    type: object
+                    properties:
+                      DRAFT:
+                        type: integer
+                        format: int32
+                      OPEN:
+                        type: integer
+                        format: int32
+                      CLOSED:
+                        type: integer
+                        format: int32
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        canvasId:
+                          type: string
+                        title:
+                          type: string
+                        description:
+                          type: string
+                        shape:
+                          type: string
+                        rows:
+                          type: integer
+                          format: int32
+                        cols:
+                          type: integer
+                          format: int32
+                        chunkSize:
+                          type: integer
+                          format: int32
+                        cooldown:
+                          type: integer
+                          format: int32
+                        events:
+                          description: Some of the eligible POAPs to participate in the canvas
+                          type: array
+                          maxItems: 5
+                          items:
+                            type: object
+                            properties:
+                              eventId:
+                                type: integer
+                                format: int32
+                              cooldown:
+                                type: integer
+                                format: int32
+                        paletteId:
+                          type: string
+                          enum: [master, pastel, greyscale] # at least
+                        startTs:
+                          $ref: "#/components/schemas/Timestamp"
+                        endTs:
+                          $ref: "#/components/schemas/Timestamp"
+                        mintEndTs:
+                          $ref: "#/components/schemas/Timestamp"
+                        totalEvents:
+                          type: integer
+                          format: int32
+                        status:
+                          type: string
+                          enum: [DRAFT, OPEN, CLOSED]
+  /canvas/{canvasId}:
+    get:
+      summary: More detailed general information about a canvas
+      parameters:
+        - in: path
+          name: canvasId
+          schema:
+            type: string
+          required: true
+          description: The id of the canvas
+        - in: query
+          name: palette
+          schema:
+            type: boolean
+            default: false
+          required: false
+          description: Optionally request the color palette which is used for this dashboard 
+      responses:
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canvasId:
+                      type: string
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  shape:
+                    type: string
+                  rows:
+                    type: integer
+                    format: int32
+                  cols:
+                    type: integer
+                    format: int32
+                  chunkSize:
+                    type: integer
+                    format: int32
+                  cooldown:
+                    description: Default pixel cooldown of the canvas, in seconds
+                    type: integer
+                    format: int32
+                  events:
+                    description: Eligible POAPs to participate in the canvas
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        eventId:
+                          type: integer
+                          format: int32
+                        cooldown:
+                          description: Pixel cooldown reduction from this POAP
+                          type: integer
+                          format: int32
+                  paletteId:
+                    type: string
+                    enum: [master, pastel, greyscale]
+                  palette:
+                    nullable: true
+                    type: array
+                    items:
+                      description: RGB hex code of the color
+                      type: string
+                      pattern: '^[0-9a-fA-F]{6}$'
+                  startTs:
+                    $ref: "#/components/schemas/Timestamp"
+                  endTs:
+                    $ref: "#/components/schemas/Timestamp"
+                  mintEndTs:
+                    $ref: "#/components/schemas/Timestamp"
+                  status:
+                    type: string
+                    enum: [DRAFT, OPEN, CLOSED]
+  /canvas/{canvasId}/chunk/{row}:{col}:
+    get:
+      summary: Current pixel colors of a canvas chunk
+      parameters:
+        - in: path
+          name: canvasId
+          schema:
+            type: string
+          required: true
+          description: The id of the canvas
+        - in: path
+          name: row
+          description: The row of the canvas chunk
+          required: true
+          schema:
+            type: integer
+            default: 0
+        - in: path
+          required: true
+          name: col
+          description: The column of the canvas chunk
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: >
+            The returned data contains an `uint8[]` of palette indices. Each number represents one pixel.<br>
+            For example, suppose the 5th element was 3. That means that the pixel in row = 5 / `chunkSize` and column = 5 % `chunkSize` of the requested chunk is the one defined at `palette[3]`.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /canvas/{canvasId}/paint:
+    post:
+      summary: Paint a pixel
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                x:
+                  type: integer
+                y:
+                  type: integer
+                color:
+                  type: integer
+      parameters:
+        - in: path
+          name: canvasId
+          schema:
+            type: string
+          required: true
+          description: The id of the canvas
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  waitSeconds:
+                    type: number
+                  ts:
+                    $ref: "#/components/schemas/Timestamp"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /signin-bot:
+    post:
+      summary: Sign in as a bot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                signature:
+                  type: string
+      parameters:
+        - in: header
+          name: X-POAP-Art-Bot
+          required: true
+          schema:
+            type: string
+            default: RamiRond Bot
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  wallet:
+                    type: string
+                  ens:
+                    type: string
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+# TODO websocket documentation. Doesn't really fit here but good enough if everything is in one place
+
+
+components:
+  schemas:
+    Timestamp:
+      description: A unix timestamp, represented as hex number in milliseconds
+      type: string
+      pattern: '^[0-9a-fA-F]+$'
+      maxLength: 11
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
