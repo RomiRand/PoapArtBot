@@ -14,7 +14,7 @@ const mode = urlParams.get('mode')
 
 let title
 let bearer = ""
-let api = mode === "sandbox" ? "api-sandbox.poap.art/" : "api.poap.art/"
+let api = mode === "sandbox" ? "api.sandbox.poap.art/" : "api.poap.art/"
 let main = api + "canvas/"
 let baseUrl = "https://" + main
 let idx_array
@@ -629,7 +629,7 @@ async function singIn()
             return console.error('ERROR', result);
 
         //let url = baseUrl + canvasId + "/signin"
-        let url = "https://" + api + "signin"
+        let url = "https://" + api + "signin-bot"
         const data= {
             //wallet: myAddress,
             //chainId: 1,
@@ -639,7 +639,8 @@ async function singIn()
             method: "POST",
             body: JSON.stringify(data),
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-POAP-Art-Bot': 'RamiRond Bot'
             }
         }
         await fetch(url, params)

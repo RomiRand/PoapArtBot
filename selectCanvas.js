@@ -32,7 +32,7 @@ function loadAllCanvas() {
                 }
             })
     }
-    get("https://api-sandbox.poap.art/canvas", "sandbox");
+    get("https://api.sandbox.poap.art/canvas", "sandbox");
     get("https://api.poap.art/canvas", "app");
 }
 
